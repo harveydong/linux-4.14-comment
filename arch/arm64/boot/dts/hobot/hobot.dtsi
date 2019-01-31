@@ -507,6 +507,22 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&sdio1_func>;
 		};
+
+        jpu: jpu@0xA8010000 {
+            compatible = "hobot,cnm_jpu";
+            reg = <0 0xA8010000 0 0x10000>;
+            interrupt-parent = <&gic>;
+            interrupts = <0 66 4>;
+            status = "disabled";
+        };
+
+        vpu: vpu@0xA8000000 {
+            compatible = "hobot,cnm_vpu";
+            reg = <0 0xA8000000 0 0x10000>;
+            interrupt-parent = <&gic>;
+            interrupts = <0 65 4>;
+            status = "disabled";
+        };
 	};
 };
 

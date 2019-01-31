@@ -240,3 +240,11 @@
 &timer0 {
 	status = "okay";
 };
+
+&jpu {
+    status = "okay";
+};
+
+&vpu {
+    status = "okay";
+};
