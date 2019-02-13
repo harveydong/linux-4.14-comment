@@ -221,6 +221,12 @@
 			reset-names = "i2c";
 			status = "disabled";
 		};
+		usedrv: usrdrv@0xA700C000 {
+            		compatible = "hobot,usrdrv";
+ 		        reg = <0 0xA500C000 0 0x100>;
+            		interrupt-parent = <&gic>;
+            		interrupts = <0 92 4>, <0 93 4>, <0 94 4>;
+		};
 
 		ips: ips@0xA4000000 {
 			compatible = "hobot,x2-ips";
