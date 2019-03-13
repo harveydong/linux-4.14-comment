@@ -26,6 +26,7 @@ mk_all()
     #echo make all with $j
     make CROSS_COMPILE=$cross ARCH=$arch Image $j
     make CROSS_COMPILE=$cross ARCH=$arch dtbs
+    make CROSS_COMPILE=$cross ARCH=$arch modules 
 }
 
 mk_dtbs()

@@ -23,6 +23,14 @@ config USRDRV
 	tristate "USRDRV Driver"
 	---help---
 	   Driver for the user mode driver 
+config HZ_DSI
+	tristate "DSI Driver"
+	---help---
+	   DSI Driver
+config KERNEL_CLIENT
+	tristate "kernel Client"
+	---help---
+	   kernel Client
 if X2_SIF
 config X2_MIPI_HOST
 	tristate "X2 MIPI Host Driver"
