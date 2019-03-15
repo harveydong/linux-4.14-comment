@@ -43,7 +43,7 @@ uint32_t mmcm_read_word(struct mipi_dsi_dev *dev, uint32_t reg_address)
 		return -ENODEV;
 	}
 
-	ret = ioread32(dev->mmcm_addr + reg_address);
+	ret = zu3_ioread32_mmcm(dev->mmcm_addr + reg_address);
 	pr_debug("MMCM: READ ADDR %X DATA %X\n", reg_address, ret);
 	return ret;
 }
@@ -73,5 +73,5 @@ void mmcm_write_word(struct mipi_dsi_dev *dev, uint32_t reg_address, uint32_t da
 		return;
 	}
 	pr_debug("MMCM: WRITE ADDR %X DATA %X\n", reg_address, data);
-	iowrite32(data,dev->mmcm_addr + reg_address);
+	zu3_iowrite32_mmcm(data,dev->mmcm_addr + reg_address);
 }

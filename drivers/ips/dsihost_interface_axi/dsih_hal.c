@@ -25,7 +25,7 @@ void mipi_dsih_write_word(struct mipi_dsi_dev *dev, uint32_t reg_address, uint32
 	}
 	pr_debug("CORE: ADDR %X DATA %X\n",reg_address,data);
 
-	iowrite32(data,dev->core_addr + reg_address);
+	zu3_iowrite32_hal(data,dev->core_addr + reg_address);
 }
 /**
  * Write a bit field o a 32-bit word to the DSI Host core
@@ -58,7 +58,7 @@ uint32_t mipi_dsih_read_word(struct mipi_dsi_dev *dev, uint32_t reg_address)
 		pr_err("%s:Device is null\n", FUNC_NAME);
 		return -ENODEV;
 	}
-	ret = ioread32(dev->core_addr + reg_address);
+	ret = zu3_ioread32_hal(dev->core_addr + reg_address);
 
 	return ret;
 }

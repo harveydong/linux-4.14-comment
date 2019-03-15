@@ -5,32 +5,24 @@
 #include<linux/init.h>
 #include<linux/module.h>
 
-//======================================================================
-#define IP_SIZE 20
-#define BUF_SIZE 1024
-#define RETRY_CNT 5
+#define BUFFER_SIZE 1024
 
-#define client_log(format, ...)   printk(format, ##__VA_ARGS__)
-#define client_info(format, ...)   printk(format, ##__VA_ARGS__)
-#define client_dbg(format, ...)   printk(format, ##__VA_ARGS__)
 
 typedef struct io_rw_s {
 	uint64_t address;
 	uint32_t data;
 }io_rw_t;
 
-struct socket *g_sock;
+int  g_sockfd;
 int  g_port   = 5000;
 char g_ip[IP_SIZE];
 char g_buff_in[BUF_SIZE];
 char g_buff_out[BUF_SIZE];
 
-int client_connect(void)
+int client_connect()
 {
-	int ret = 0;
 	struct sockaddr_in serv_addr; 
-	ret = sock_create_kern(&init_net, AF_INET, SOCK_STREAM, 0, &g_sock);
-    if(ret < 0)
+    if((g_sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         client_log("\n client: Error : Could not create socket \n");
         return 1;
@@ -40,10 +32,14 @@ int client_connect(void)
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(g_port); 
-	serv_addr.sin_addr.s_addr = in_aton(g_ip);
-	
-	ret = g_sock->ops->connect(g_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr), 0);
-    if(ret != 0)
+
+    if(inet_pton(AF_INET, g_ip, &serv_addr.sin_addr)<=0)
+    {
+        client_log("\n client: inet_pton error occured\n");
+        return 1;
+    } 
+
+    if( connect(g_sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
        client_log("\n client: Error : Connect Failed \n");
        return 1;
@@ -52,24 +48,17 @@ int client_connect(void)
 	return 0;
 }
 
-int client_disconnect(void)
+int client_disconnect()
 {
-	kernel_sock_shutdown(g_sock, SHUT_RDWR);
-	sock_release(g_sock);
+	close(g_sockfd); 
 }
 
 int pingpong(char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
 {
-	struct kvec send_vec, recv_vec;
-    struct msghdr send_msg, recv_msg;
 	int i, ret;
 	for(i=0;i<RETRY_CNT;i++)
 	{
-		memset(&send_msg, 0, sizeof(send_msg));
-		memset(&send_vec, 0, sizeof(send_vec));
-		send_vec.iov_base = buff_in;
-		send_vec.iov_len = len_in;
-		ret = kernel_sendmsg(g_sock, &send_msg, &send_vec, 1, len_in);
+		ret = write(g_sockfd, buff_in, len_in); 
 		if(ret == len_in) break;
 	}
 	if(RETRY_CNT == i) 
@@ -79,11 +68,7 @@ int pingpong(char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
 	}
 	for(i=0;i<RETRY_CNT;i++)
 	{
-		memset(&recv_vec, 0, sizeof(recv_vec));
-		memset(&recv_msg, 0, sizeof(recv_msg));
-		recv_vec.iov_base = buff_out;
-		recv_vec.iov_len = len_out;
-		ret = kernel_recvmsg(g_sock, &recv_msg, &recv_vec, 1, len_out, 0);
+		*len_out = read(g_sockfd, buff_out, BUF_SIZE); 
 		if(*len_out) break;
 	}
 	if(RETRY_CNT == i) 
@@ -145,52 +130,7 @@ int rpc_system(char *cmd)
 	return ret;
 }
 
-int main(int argc, char *argv[])
-{
-    int n = 0;
-	uint32_t data;
-    strncpy(g_ip, argv[1], IP_SIZE);
 
-    if(argc < 2)
-    {
-        client_log("\n client: Usage: %s <ip of server> [Q]\n",argv[0]);
-        return 1;
-    } 
-
-	client_connect();
-    
-	client_log("client: write\n");
-    rpc_reg_write(0,0x123456);
-	client_log("client: read\n");
-	rpc_reg_read(0,&data);
-	client_log("client: ls\n");
-	rpc_system("ls");
-	client_log("client: done\n");
-	
-	if(3 == argc)
-	{
-		if(argv[2][0] == 'Q') 
-			rpc_quit(0);
-		else
-			rpc_quit(1);
-
-	}
-	else
-	{
-		rpc_quit(1);
-	}
-	
-    if(n < 0)
-    {
-        client_log("\n client: Read error \n");
-    }
-    client_log("client: exit\n");
-    
-	client_disconnect();
-    return 0;
-}
-//======================================================================
-#define BUFFER_SIZE 1024
 int connect_send_recv(void){
     struct socket *sock;
     struct sockaddr_in s_addr;
@@ -275,13 +215,9 @@ int connect_send_recv(void){
     return 0;
 }
 
-
-//======================================================================
 static int client_example_init(void){
     printk("client: init\n");
-    //connect_send_recv();
-	//test_main();
-	return 0;
+    return connect_send_recv();
 }
 
 static void client_example_exit(void){

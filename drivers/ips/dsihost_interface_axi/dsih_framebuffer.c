@@ -16,6 +16,7 @@
 #include "dsih_hal.h"
 #include "dsih_video.h"
 #include "dsih_displays.h"
+#include "includes.h"
 
 struct mipi_dsi_dev *pdev_array[2];
 struct mipi_dsi_dev *pdev;
@@ -92,13 +93,13 @@ void init_frame_buffer(struct mipi_dsi_dev *dev)
 int bus32_write(uint32_t offset, uint32_t data)
 {
 
-	iowrite32(data, (void *)(pdev->core_addr + offset));
+	zu3_iowrite32_framebuffer(data, (void *)(pdev->core_addr + offset));
 	return 0;
 }
 
 int bus32_read(uint32_t offset, uint32_t * data)
 {
-	*data = ioread32((void *)(pdev->core_addr + offset));
+	*data = zu3_ioread32_framebuffer((void *)(pdev->core_addr + offset));
 	return 0;
 }
 
@@ -183,7 +184,7 @@ int fb_mipi_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	}
 	case FB_MIPI_READY_CLK_DLY:
 	{
-		copy_from_user(&ready_dly, (void __user *)arg, sizeof(int));
+		copy_from_user(&ready_dly, (void __user *)arg, sizeof(uint8_t));
 		mipi_dsih_dphy_delay(pdev, ready_dly);
 		break;
 	}
@@ -522,14 +523,14 @@ int fb_mipi_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	}
 	case FB_MIPI_RX:
 	{
-		copy_from_user(&rx_en, (void __user *)arg, sizeof(int));
+		copy_from_user(&rx_en, (void __user *)arg, sizeof(uint8_t));
 
 		mipi_dsih_enable_rx(pdev, rx_en);
 		break;
 	}
 	case FB_MIPI_ACK:
 	{
-		copy_from_user(&ack_en, (void __user *)arg, sizeof(int));
+		copy_from_user(&ack_en, (void __user *)arg, sizeof(uint8_t));
 		rx_en = ack_en ? 1 : rx_en;
 		mipi_dsih_peripheral_ack(pdev, ack_en);
 		mipi_dsih_enable_rx(pdev, rx_en);
@@ -564,7 +565,7 @@ int fb_mipi_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	}
 	case FB_MIPI_CMD_HS:
 	{
-		copy_from_user(&cmd_lp, (void __user *)arg, sizeof(int));
+		copy_from_user(&cmd_lp, (void __user *)arg, sizeof(uint8_t));
 
 		if (!cmd_lp)
 			mipi_dsih_dphy_enable_hs_clk(pdev, 1);
@@ -575,7 +576,7 @@ int fb_mipi_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	}
 	case FB_MIPI_ECC:
 	{
-		copy_from_user(&ecc_en, (void __user *)arg, sizeof(int));
+		copy_from_user(&ecc_en, (void __user *)arg, sizeof(uint8_t));
 
 		rx_en = ecc_en ? 1 : rx_en;
 		mipi_dsih_ecc_rx(pdev, ecc_en);
@@ -584,7 +585,7 @@ int fb_mipi_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	}
 	case FB_MIPI_EOTP_TX:
 	{
-		copy_from_user(&eotp_tx_en, (void __user *)arg, sizeof(int));
+		copy_from_user(&eotp_tx_en, (void __user *)arg, sizeof(uint8_t));
 
 		rx_en = eotp_tx_en ? 1 : rx_en;
 		mipi_dsih_eotp_tx(pdev, eotp_tx_en);
@@ -593,7 +594,7 @@ int fb_mipi_ioctl(struct fb_info *info, unsigned int cmd, unsigned long arg)
 	}
 	case FB_MIPI_EOTP_RX:
 	{
-		copy_from_user(&eotp_rx_en, (void __user *)arg, sizeof(int));
+		copy_from_user(&eotp_rx_en, (void __user *)arg, sizeof(uint8_t));
 
 		rx_en = eotp_rx_en ? 1 : rx_en;
 		mipi_dsih_eotp_rx(pdev, eotp_rx_en);

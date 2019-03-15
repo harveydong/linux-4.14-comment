@@ -177,4 +177,21 @@ void *alloc_mem(char *info, size_t size, struct mem_alloc *allocated);
 void dsi_platform_init(struct mipi_dsi_dev *dev,
 			int display, int video_mode, int lanes);
 
+#define zu3_iowrite32_dphy(data, addr)
+#define zu3_ioread32_dphy(addr)                   0
+
+#define zu3_iowrite32_dphy_gen3(data, addr)
+#define zu3_ioread32_dphy_gen3(addr)              0
+
+#define zu3_iowrite32_framebuffer(data, addr)
+#define zu3_ioread32_framebuffer(addr)            0
+
+#define zu3_iowrite32_hal(data, addr)
+#define zu3_ioread32_hal(addr)                    0
+
+#define zu3_iowrite32_mmcm(data, addr)
+#define zu3_ioread32_mmcm(addr)                   0
+
+#define zu3_iowrite32_video(data, addr)
+#define zu3_ioread32_video(addr)                  0
 #endif /* __INCLUDES_H__ */

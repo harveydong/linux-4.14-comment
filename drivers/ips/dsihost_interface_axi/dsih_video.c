@@ -26,14 +26,14 @@ video_if_write(struct mipi_dsi_dev *dev, u32 reg, u32 value)
 {
         pr_debug("BRIDGE: DATA %d @ ADDR 0x%x\n",
 		value, (unsigned int)dev->vid_bridge_addr + (reg << 2));
-	iowrite32(value, dev->vid_bridge_addr + (reg << 2));
+	zu3_iowrite32_video(value, dev->vid_bridge_addr + (reg << 2));
 
 }
 
 /* IO accessors */
 static inline u32 video_if_read(struct mipi_dsi_dev *dev, u32 reg)
 {
-	return ioread32(dev->vid_bridge_addr + (reg << 2));
+	return zu3_ioread32_video(dev->vid_bridge_addr + (reg << 2));
 }
 
 void video_if_write_part(struct mipi_dsi_dev *dev, uint32_t reg_address,

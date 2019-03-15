@@ -1389,7 +1389,7 @@ void mipi_dsih_dphy_mmcm_pclk(struct mipi_dsi_dev *dev, uint32_t pclk)
  */
 void mipi_dsih_dphy_write_word(struct mipi_dsi_dev *dev, uint32_t reg_address, uint32_t data)
 {
-	iowrite32(data, dev->core_addr + reg_address);
+	zu3_iowrite32_dphy(data, dev->core_addr + reg_address);
 }
 /**
  * Write bit field to D-PHY module (encapsulating the bus interface)
@@ -1422,7 +1422,7 @@ void mipi_dsih_dphy_write_part(struct mipi_dsi_dev *dev, uint32_t reg_address, u
  */
 uint32_t mipi_dsih_dphy_read_word(struct mipi_dsi_dev *dev, uint32_t reg_address)
 {
-	return ioread32(dev->core_addr + reg_address);
+	return zu3_ioread32_dphy(dev->core_addr + reg_address);
 }
 /**
  * Read bit field from D-PHY module (encapsulating the bus interface)

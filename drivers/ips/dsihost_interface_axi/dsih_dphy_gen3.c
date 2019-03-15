@@ -42,7 +42,7 @@ uint32_t gen3_if_read_word(struct mipi_dsi_dev *dev, uint32_t reg_address)
 		pr_err("%s:Device is null\n", FUNC_NAME);
 		return -ENODEV;
 	}
-	ret = ioread32(dev->gen3_if_addr + reg_address);
+	ret = zu3_ioread32_dphy_gen3(dev->gen3_if_addr + reg_address);
 
 	return ret;
 }
@@ -72,5 +72,5 @@ void gen3_if_write_word(struct mipi_dsi_dev *dev, uint32_t reg_address, uint32_t
 		return;
 	}
 	pr_debug("GEN3 IF: ADDR %X DATA %X\n",reg_address,data);
-	iowrite32(data,dev->gen3_if_addr + reg_address);
+	zu3_iowrite32_dphy_gen3(data,dev->gen3_if_addr + reg_address);
 }

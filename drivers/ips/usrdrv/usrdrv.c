@@ -132,6 +132,16 @@ void usrdrv_irq_set_pending(unsigned int irq)
 	irq_set_irqchip_state(irq, IRQCHIP_STATE_PENDING, 1);
 }
 
+bool usrdrv_irq_get_mask(unsigned int irq)
+{
+	bool masked;
+//int irq_set_irqchip_state(unsigned int irq, enum irqchip_irq_state which, bool val)
+//.irq_set_irqchip_state  = gic_irq_set_irqchip_state,
+//static int gic_irq_set_irqchip_state(struct irq_data *d, enum irqchip_irq_state which, bool val)
+	irq_get_irqchip_state(irq, IRQCHIP_STATE_MASKED, &masked);
+	return masked;
+}
+
 
 static unsigned int usrdrv_poll(struct file *file, struct poll_table_struct *wait)
 {
