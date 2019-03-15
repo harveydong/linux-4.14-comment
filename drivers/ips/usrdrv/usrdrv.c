@@ -142,7 +142,6 @@ bool usrdrv_irq_get_mask(unsigned int irq)
 	return masked;
 }
 
-
 static unsigned int usrdrv_poll(struct file *file, struct poll_table_struct *wait)
 {
 	usrdrv_file_pri_t *fpri = usrdrv_file_pri(file);
@@ -152,11 +151,14 @@ static unsigned int usrdrv_poll(struct file *file, struct poll_table_struct *wai
 	//@fixme 1, it maybe have chance to lost interrupt before poll_wait()
 	//@fixme 2, need add a variable for interrupt enable/disable
 	spin_lock_irqsave(&fpri->event_lock, flags);
-	if(fpri->irq_enable == 0)
+	if((fpri->irq_enable == 0) || usrdrv_irq_get_mask(fpri->irq_num)==1)
 	{
 		fpri->irq_enable = 1;
 		enable_irq(fpri->irq_num);
-	}
+	} else {
+		usrdrverr("usrdrv irq input data error!");
+		usrdrverr("auto fire %d, irq_enable=%d, irq_auto_fire_cnt=%d", fpri->irq_num,fpri->irq_enable, fpri->irq_auto_fire_cnt);
+  }
 	if(fpri->irq_auto_fire)
 	{
 		usrdrv_irq_set_pending(fpri->irq_num);
@@ -268,6 +270,7 @@ static long usrdrv_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			}
 			//spin_unlock_irqrestore(&fpri->event_lock, flags);
 		}
+		break;
 		case USRDRV_IRQ_AUTO_FIRE:
 		{
 			uint32_t irq_auto_fire;
