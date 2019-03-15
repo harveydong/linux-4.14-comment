@@ -4,11 +4,9 @@
 #include<net/sock.h>
 #include<linux/init.h>
 #include<linux/module.h>
-
+#include"kernel_client.h"
 //======================================================================
-#define IP_SIZE 20
-#define BUF_SIZE 1024
-#define RETRY_CNT 5
+#define RETRY_CNT          5
 
 #define client_log(format, ...)   printk(format, ##__VA_ARGS__)
 #define client_info(format, ...)   printk(format, ##__VA_ARGS__)
@@ -19,17 +17,11 @@ typedef struct io_rw_s {
 	uint32_t data;
 }io_rw_t;
 
-struct socket *g_sock;
-int  g_port   = 5000;
-char g_ip[IP_SIZE] = "192.168.1.202";
-char g_buff_in[BUF_SIZE];
-char g_buff_out[BUF_SIZE];
-
-int client_connect(void)
+int client_connect(krpc_t *krpc, char *ip, int port)
 {
 	int ret = 0;
 	struct sockaddr_in serv_addr; 
-	ret = sock_create_kern(&init_net, AF_INET, SOCK_STREAM, 0, &g_sock);
+	ret = sock_create_kern(&init_net, AF_INET, SOCK_STREAM, 0, &krpc->sock);
     if(ret < 0)
     {
         client_log("\n client: Error : Could not create socket \n");
@@ -39,10 +31,10 @@ int client_connect(void)
     memset(&serv_addr, '0', sizeof(serv_addr)); 
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(g_port); 
-	serv_addr.sin_addr.s_addr = in_aton(g_ip);
+    serv_addr.sin_port = htons(port); 
+	serv_addr.sin_addr.s_addr = in_aton(ip);
 	
-	ret = g_sock->ops->connect(g_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr), 0);
+	ret = krpc->sock->ops->connect(krpc->sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr), 0);
     if(ret != 0)
     {
        client_log("\n client: Error : Connect Failed \n");
@@ -52,13 +44,14 @@ int client_connect(void)
 	return 0;
 }
 
-int client_disconnect(void)
+int client_disconnect(krpc_t *krpc)
 {
-	kernel_sock_shutdown(g_sock, SHUT_RDWR);
-	sock_release(g_sock);
+	kernel_sock_shutdown(krpc->sock, SHUT_RDWR);
+	sock_release(krpc->sock);
+	return 0;
 }
 
-int pingpong(char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
+int pingpong(krpc_t *krpc,char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
 {
 	struct kvec send_vec, recv_vec;
     struct msghdr send_msg, recv_msg;
@@ -69,7 +62,7 @@ int pingpong(char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
 		memset(&send_vec, 0, sizeof(send_vec));
 		send_vec.iov_base = buff_in;
 		send_vec.iov_len = len_in;
-		ret = kernel_sendmsg(g_sock, &send_msg, &send_vec, 1, len_in);
+		ret = kernel_sendmsg(krpc->sock, &send_msg, &send_vec, 1, len_in);
 		if(ret == len_in) break;
 	}
 	if(RETRY_CNT == i) 
@@ -83,7 +76,7 @@ int pingpong(char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
 		memset(&recv_msg, 0, sizeof(recv_msg));
 		recv_vec.iov_base = buff_out;
 		recv_vec.iov_len = BUF_SIZE;
-		*len_out = kernel_recvmsg(g_sock, &recv_msg, &recv_vec, 1, BUF_SIZE, 0);
+		*len_out = kernel_recvmsg(krpc->sock, &recv_msg, &recv_vec, 1, BUF_SIZE, 0);
 		if(*len_out) break;
 	}
 	if(RETRY_CNT == i) 
@@ -94,82 +87,83 @@ int pingpong(char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
 	return 0;
 }
 
-int rpc_reg_write(uint64_t address, uint32_t data)
+int krpc_reg_write(krpc_t *krpc,uint64_t address, uint32_t data)
 {
 	int len, ret, len_out;
-	io_rw_t *io_rw = (io_rw_t*)(g_buff_in+1);
+	io_rw_t *io_rw = (io_rw_t*)(krpc->buff_in+1);
 	
-	g_buff_in[0] = 'w';
+	krpc->buff_in[0] = 'w';
 	io_rw->address = address;
 	io_rw->data = data;
 	len = sizeof(io_rw_t)+1;
-	ret = pingpong(g_buff_in, len, g_buff_out, &len_out);
+	ret = pingpong(krpc,krpc->buff_in, len, krpc->buff_out, &len_out);
 
 	return ret;
 }
 
-int rpc_reg_read(uint64_t address, uint32_t *data)
+uint32_t krpc_reg_read_ret(krpc_t *krpc,uint64_t address)
 {
 	int len, ret, len_out;
-	io_rw_t *io_rw = (io_rw_t*)(g_buff_in+1);
+	io_rw_t *io_rw = (io_rw_t*)(krpc->buff_in+1);
 	
-	g_buff_in[0] = 'r';
+	krpc->buff_in[0] = 'r';
 	io_rw->address = address;	
 	len = sizeof(io_rw_t)+1;
-	ret = pingpong(g_buff_in, len, g_buff_out, &len_out);
+	ret = pingpong(krpc,krpc->buff_in, len, krpc->buff_out, &len_out);
+	return io_rw->data;
+}
+
+int krpc_reg_read(krpc_t *krpc,uint64_t address, uint32_t *data)
+{
+	int len, ret, len_out;
+	io_rw_t *io_rw = (io_rw_t*)(krpc->buff_in+1);
+	
+	krpc->buff_in[0] = 'r';
+	io_rw->address = address;	
+	len = sizeof(io_rw_t)+1;
+	ret = pingpong(krpc,krpc->buff_in, len, krpc->buff_out, &len_out);
 	*data = io_rw->data;
 	
 	return ret;
 }
 
-int rpc_quit(int only_client)
+
+
+int krpc_quit(krpc_t *krpc,int only_client)
 {
 	int len, ret, len_out;
 	if(only_client)
-		g_buff_in[0] = 'q';
+		krpc->buff_in[0] = 'q';
 	else
-		g_buff_in[0] = 'Q';
+		krpc->buff_in[0] = 'Q';
 	len = 2;
-	ret = pingpong(g_buff_in, len, g_buff_out, &len_out);
+	ret = pingpong(krpc,krpc->buff_in, len, krpc->buff_out, &len_out);
 	return ret;
 }
 
-int rpc_system(char *cmd)
+int krpc_system(krpc_t *krpc,char *cmd)
 {
 	int len, ret, len_out;
-	g_buff_in[0] = 's';
-	snprintf(g_buff_in+1,strlen(cmd)+1,"%s",cmd);
+	krpc->buff_in[0] = 's';
+	snprintf(krpc->buff_in+1,strlen(cmd)+1,"%s",cmd);
 	len = strlen(cmd)+1;
-	client_log("client: send command %s\n",g_buff_in);
-	ret = pingpong(g_buff_in, len, g_buff_out, &len_out);
+	client_log("client: send command %s\n",krpc->buff_in);
+	ret = pingpong(krpc,krpc->buff_in, len, krpc->buff_out, &len_out);
 	return ret;
 }
 
-int test_main(void)
+int krpc_init(krpc_t *krpc, char *ip, int port)
 {
-    int n = 0;
-	uint32_t data;
-
-	client_connect();
-    
-	client_log("client: write\n");
-    rpc_reg_write(0,0x123456);
-	client_log("client: read\n");
-	rpc_reg_read(0,&data);
-	client_log("client: ls\n");
-	rpc_system("ls");
-	client_log("client: done\n");
-	
-	rpc_quit(1);
-	
-    if(n < 0)
-    {
-        client_log("\n client: Read error \n");
-    }
-    client_log("client: exit\n");
-    
-	client_disconnect();
+	client_connect(krpc, ip, port);
     return 0;
+}
+
+int krpc_deinit(krpc_t *krpc)
+{
+	krpc_quit(krpc,1);
+    client_log("client: exit\n");
+	client_disconnect(krpc);
+	return 0;
 }
 //======================================================================
 #define BUFFER_SIZE 1024
@@ -257,19 +251,42 @@ int connect_send_recv(void){
     return 0;
 }
 
-
+krpc_t g_krpc;
 //======================================================================
 static int client_example_init(void){
-    printk("client: init\n");
+	//version 1:
     //connect_send_recv();
-	test_main();
+	
+	//version 2:
+	uint32_t data;	
+    printk("client: init\n");
+	krpc_init(&g_krpc,"192.168.1.202",5000);		
+    
+	//test:
+	client_log("client: write 0x123456\n");
+    krpc_reg_write(&g_krpc,0,0x123456);
+	krpc_reg_read(&g_krpc,0,&data);
+	client_log("client: read %x\n", data);
+	client_log("client: ls\n");
+	krpc_system(&g_krpc,"ls");
+	client_log("client: done\n");
+
 	return 0;
 }
 
 static void client_example_exit(void){
+	krpc_deinit(&g_krpc);
     printk("client: exit!\n");
 }
 
 module_init(client_example_init);
 module_exit(client_example_exit);
 MODULE_LICENSE("GPL");
+EXPORT_SYMBOL(krpc_reg_write);
+EXPORT_SYMBOL(krpc_reg_read);
+EXPORT_SYMBOL(krpc_reg_read_ret);
+EXPORT_SYMBOL(krpc_quit);
+EXPORT_SYMBOL(krpc_system);
+EXPORT_SYMBOL(krpc_init);
+EXPORT_SYMBOL(krpc_deinit);
+EXPORT_SYMBOL(g_krpc);

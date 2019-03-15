@@ -6,6 +6,8 @@ echo ====== kill ======
 
 echo ====== server.bin ======
 sudo ./server.bin.x86 &
+#use nice to improve response
+#nice --adjustment=-20 /mnt/x2a/server.bin.arm &
 sleep 2
 
 echo ====== client.bin ======

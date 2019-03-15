@@ -37,7 +37,7 @@
 #include <asm/io.h>
 
 #include "dsih_core.h"
-
+#include "../client_in_kernel/kernel_client.h"
 #define TRUE 1
 #define FALSE 0
 
@@ -177,21 +177,28 @@ void *alloc_mem(char *info, size_t size, struct mem_alloc *allocated);
 void dsi_platform_init(struct mipi_dsi_dev *dev,
 			int display, int video_mode, int lanes);
 
-#define zu3_iowrite32_dphy(data, addr)
-#define zu3_ioread32_dphy(addr)                   0
+#define DSIH_BASE_DPHY        0
+#define DSIH_BASE_DPHY_GEN3   0
+#define DSIH_BASE_FRAMEBUFFER 0
+#define DSIH_BASE_HAL         0
+#define DSIH_BASE_MMCM        0
+#define DSIH_BASE_VIDEO       0
 
-#define zu3_iowrite32_dphy_gen3(data, addr)
-#define zu3_ioread32_dphy_gen3(addr)              0
+#define zu3_iowrite32_dphy(data, addr)            krpc_reg_write   (&g_krpc, ((addr) - dev->core_addr       +DSIH_BASE_DPHY),        data)
+#define zu3_ioread32_dphy(addr)                   krpc_reg_read_ret(&g_krpc, ((addr) - dev->core_addr       +DSIH_BASE_DPHY))
 
-#define zu3_iowrite32_framebuffer(data, addr)
-#define zu3_ioread32_framebuffer(addr)            0
+#define zu3_iowrite32_dphy_gen3(data, addr)       krpc_reg_write   (&g_krpc, ((addr) - dev->gen3_if_addr    +DSIH_BASE_DPHY_GEN3),   data)
+#define zu3_ioread32_dphy_gen3(addr)              krpc_reg_read_ret(&g_krpc, ((addr) - dev->gen3_if_addr    +DSIH_BASE_DPHY_GEN3))
 
-#define zu3_iowrite32_hal(data, addr)
-#define zu3_ioread32_hal(addr)                    0
+#define zu3_iowrite32_framebuffer(data, addr)     krpc_reg_write   (&g_krpc, ((addr) - pdev->core_addr      +DSIH_BASE_FRAMEBUFFER), data)
+#define zu3_ioread32_framebuffer(addr)            krpc_reg_read_ret(&g_krpc, ((addr) - pdev->core_addr      +DSIH_BASE_FRAMEBUFFER))
 
-#define zu3_iowrite32_mmcm(data, addr)
-#define zu3_ioread32_mmcm(addr)                   0
+#define zu3_iowrite32_hal(data, addr)             krpc_reg_write   (&g_krpc, ((addr) - dev->core_addr       +DSIH_BASE_HAL),         data)
+#define zu3_ioread32_hal(addr)                    krpc_reg_read_ret(&g_krpc, ((addr) - dev->core_addr       +DSIH_BASE_HAL))
 
-#define zu3_iowrite32_video(data, addr)
-#define zu3_ioread32_video(addr)                  0
+#define zu3_iowrite32_mmcm(data, addr)            krpc_reg_write   (&g_krpc, ((addr) - dev->mmcm_addr       +DSIH_BASE_MMCM),        data)
+#define zu3_ioread32_mmcm(addr)                   krpc_reg_read_ret(&g_krpc, ((addr) - dev->mmcm_addr       +DSIH_BASE_MMCM))
+
+#define zu3_iowrite32_video(data, addr)           krpc_reg_write   (&g_krpc, ((addr) - dev->vid_bridge_addr +DSIH_BASE_VIDEO),       data)
+#define zu3_ioread32_video(addr)                  krpc_reg_read_ret(&g_krpc, ((addr) - dev->vid_bridge_addr +DSIH_BASE_VIDEO))
 #endif /* __INCLUDES_H__ */
