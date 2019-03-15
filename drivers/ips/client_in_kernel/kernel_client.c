@@ -21,7 +21,7 @@ typedef struct io_rw_s {
 
 struct socket *g_sock;
 int  g_port   = 5000;
-char g_ip[IP_SIZE];
+char g_ip[IP_SIZE] = "192.168.1.202";
 char g_buff_in[BUF_SIZE];
 char g_buff_out[BUF_SIZE];
 
@@ -82,8 +82,8 @@ int pingpong(char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
 		memset(&recv_vec, 0, sizeof(recv_vec));
 		memset(&recv_msg, 0, sizeof(recv_msg));
 		recv_vec.iov_base = buff_out;
-		recv_vec.iov_len = len_out;
-		ret = kernel_recvmsg(g_sock, &recv_msg, &recv_vec, 1, len_out, 0);
+		recv_vec.iov_len = BUF_SIZE;
+		*len_out = kernel_recvmsg(g_sock, &recv_msg, &recv_vec, 1, BUF_SIZE, 0);
 		if(*len_out) break;
 	}
 	if(RETRY_CNT == i) 
@@ -96,7 +96,7 @@ int pingpong(char *buff_in, uint32_t len_in, char *buff_out, uint32_t *len_out)
 
 int rpc_reg_write(uint64_t address, uint32_t data)
 {
-	int len, ret, i, len_out;
+	int len, ret, len_out;
 	io_rw_t *io_rw = (io_rw_t*)(g_buff_in+1);
 	
 	g_buff_in[0] = 'w';
@@ -110,7 +110,7 @@ int rpc_reg_write(uint64_t address, uint32_t data)
 
 int rpc_reg_read(uint64_t address, uint32_t *data)
 {
-	int len, ret, i, len_out;
+	int len, ret, len_out;
 	io_rw_t *io_rw = (io_rw_t*)(g_buff_in+1);
 	
 	g_buff_in[0] = 'r';
@@ -145,17 +145,10 @@ int rpc_system(char *cmd)
 	return ret;
 }
 
-int main(int argc, char *argv[])
+int test_main(void)
 {
     int n = 0;
 	uint32_t data;
-    strncpy(g_ip, argv[1], IP_SIZE);
-
-    if(argc < 2)
-    {
-        client_log("\n client: Usage: %s <ip of server> [Q]\n",argv[0]);
-        return 1;
-    } 
 
 	client_connect();
     
@@ -167,18 +160,7 @@ int main(int argc, char *argv[])
 	rpc_system("ls");
 	client_log("client: done\n");
 	
-	if(3 == argc)
-	{
-		if(argv[2][0] == 'Q') 
-			rpc_quit(0);
-		else
-			rpc_quit(1);
-
-	}
-	else
-	{
-		rpc_quit(1);
-	}
+	rpc_quit(1);
 	
     if(n < 0)
     {
@@ -280,7 +262,7 @@ int connect_send_recv(void){
 static int client_example_init(void){
     printk("client: init\n");
     //connect_send_recv();
-	//test_main();
+	test_main();
 	return 0;
 }
 
