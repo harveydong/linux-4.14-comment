@@ -62,10 +62,10 @@
 
 
 #ifdef JPU_SUPPORT_ISR
-#define JPU_IRQ_NUM                 66+32 //15+32
+#define JPU_IRQ_NUM                 67+32 //15+32
 
 /* if the driver want to disable and enable IRQ whenever interrupt asserted. */
-/*#define JPU_IRQ_CONTROL*/
+#define JPU_IRQ_CONTROL
 #endif
 
 

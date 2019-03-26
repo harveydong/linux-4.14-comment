@@ -52,7 +52,7 @@
 
 #ifdef VPU_SUPPORT_ISR
 /* if the driver want to disable and enable IRQ whenever interrupt asserted. */
-//#define VPU_IRQ_CONTROL
+#define VPU_IRQ_CONTROL
 #endif
 
 /* if the platform driver knows the name of this driver */
@@ -74,7 +74,7 @@
 #define VPU_REG_SIZE (0x4000*MAX_NUM_VPU_CORE)
 
 #ifdef VPU_SUPPORT_ISR
-#define VPU_IRQ_NUM (65+32)
+#define VPU_IRQ_NUM (66+32)
 #endif
 
 /* this definition is only for chipsnmedia FPGA board env */
@@ -1286,7 +1286,7 @@ static int vpu_probe(struct platform_device *pdev)
 
 
 #ifdef VPU_SUPPORT_RESERVED_VIDEO_MEMORY
-	s_video_memory.size = VPU_INIT_VIDEO_MEMORY_SIZE_IN_BYTE;
+	s_video_memory.size = VPU_INIT_VIDEO_MEMORY_SIZE_IN_BYTE*6;  /// *6 For test FHD and UHD stream,
 	s_video_memory.phys_addr = VPU_DRAM_PHYSICAL_BASE;
 	//s_video_memory.base = (unsigned long)ioremap_nocache(s_video_memory.phys_addr, PAGE_ALIGN(s_video_memory.size));
 	s_video_memory.base = __va(s_video_memory.phys_addr);
