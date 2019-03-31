@@ -529,7 +529,7 @@
             compatible = "hobot,gdc0";
             reg = <0 0xA4010000 0 0x10000>;
             interrupt-parent = <&gic>;
-            interrupts = <0 74 4>;
+            interrupts = <0 74 1>;
             status = "okay";
         };
 
@@ -538,7 +538,7 @@
             compatible = "hobot,gdc1";
             reg = <0 0xA4020000 0 0x10000>;
             interrupt-parent = <&gic>;
-            interrupts = <0 78 4>;
+            interrupts = <0 78 1>;
             status = "okay";
         };
 
