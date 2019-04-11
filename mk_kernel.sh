@@ -78,6 +78,7 @@ helper()
     echo "    -e: extract rootfs to kernel root folder"
     echo "    -r: pack rootfs from kernel root folder"
     echo "    -m: make menuconfig by specified defconfig (define as cfg above)"
+    echo "    -o: make menuconfig without specified defconfig (define as cfg above)"
     echo "    -h: helper prompt"
     echo
 }
