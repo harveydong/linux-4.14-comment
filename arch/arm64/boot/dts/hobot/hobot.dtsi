@@ -358,19 +358,90 @@
 		};
 
 		ethernet: ethernet@A5014000 {
-			compatible = "snps,dwc-qos-ethernet-4.10";
+			compatible = "snps,dwc-qos-ethernet-4.10a";
 			reg = <0 0xA5014000 0 0x2000>;
 			interrupt-parent = <&gic>;
 			interrupts = <0 52 4>;
 
-			snps,write-requests = <16>;
-			snps,read-requests = <32>;
+			snps,write-requests = <8>;
+			//snps,read-requests = <32>;
+			snps,read-requests = <8>;
 			snps,txpbl = <32>;
 			snps,rxpbl = <16>;
+			snps,clk_csr = <2>;
+		//	snps,tso = <1>;
+
+			snps,force_sf_dma_mode = <1>;
 
                         pinctrl-names = "eth_state";
                         pinctrl-0 = <&eth_func>;
 			status = "disabled";
+			snps,mtl-rx-config {
+				snps,rx-queues-to-use = <4>;
+				snps,rx-sched-sp;	
+				queue0 {
+					snps,dcb-algorithm;
+				};
+
+				queue1 {
+
+					snps,avb-algorithm;
+					snps,route-ptp;
+				};
+
+				queue2 {
+					snps,priority = <0x4>;	
+					snps,avb-algorithm;
+					
+				};
+
+				queue3 {
+					snps,avb-algorithm;
+				//	snps,route-avcp;
+					snps,priority = <0x8>;
+					
+				};
+
+
+
+			};
+
+			snps,mtl-tx-config {
+				snps,tx-queues-to-use = <4>;
+			//	snps,tx-sched-wrr;
+				queue0 {
+					snps,dcb-algorithm;
+					snps,tx-sched-sp;
+				};
+				//for PTP (10%BW)
+				queue1 {
+					snps,avb-algorithm;
+					snps,idle_slope = <0x38e>;
+					snps,send_slope = <0x1ccc>;
+					snps,high_credit = <0x556aaa>;
+					snps,low_credit = <0xff57400>;
+					snps,priority = <0x2>;
+				};
+				//class B traffic (25%BW)
+				queue2 {
+					snps,avb-algorithm;
+					snps,idle_slope = <0x8e4>;
+					snps,send_slope = <0x1800>;
+					snps,high_credit = <0x7d0000>;
+					snps,low_credit = <0xff736000>;
+					snps,priority = <0x4>;
+				};
+
+				//classA (40%BW)
+				queue3 {
+					snps,avb-algorithm;
+					snps,idle_slope = <0xe38>;
+					snps,send_slope = <0x1333>;
+					snps,high_credit = <0x4b0000>;
+					snps,low_credit = <0xff8f8000>;
+					snps,priority = <0x8>;
+				};
+			};
 		};
 
 		iar: iar@0xA4001000 {
