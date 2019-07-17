@@ -1129,7 +1129,7 @@ static int x2_est_configuration(struct x2_priv *priv)
 
 
 	x2_est_intr_config(priv);
-
+#if 0
 	ret = x2_est_init(priv->dev, priv, &priv->plat->est_cfg, priv->dma_cap.estsel, priv->dma_cap.estdep,priv->dma_cap.estwid,priv->plat->est_en, &now);
 
 	if (ret) {
@@ -1138,7 +1138,7 @@ static int x2_est_configuration(struct x2_priv *priv)
 	 } else
 		 priv->est_enabled = true;
 
-
+#endif
 
 	if (!(priv->dma_cap.time_stamp || priv->adv_ts)) {
 		printk("%s, No HW time stamping: Disabling EST\n", __func__);
@@ -1174,6 +1174,15 @@ static int x2_est_configuration(struct x2_priv *priv)
 	//control = PTP_TCR_TSENA|PTP_TCR_TSCFUPDT | PTP_TCR_TSINIT|PTP_TCR_TSENALL|PTP_TCR_TSCTRLSSR;
 	control = PTP_TCR_TSENA | PTP_TCR_TSINIT|PTP_TCR_TSENALL|PTP_TCR_TSCTRLSSR;
 	x2_config_hw_tstamping(priv, control);
+
+	ret = x2_est_init(priv->dev, priv, &priv->plat->est_cfg, priv->dma_cap.estsel, priv->dma_cap.estdep,priv->dma_cap.estwid,priv->plat->est_en, &now);
+
+	if (ret) {
+		priv->est_enabled = false;
+		
+	 } else
+		 priv->est_enabled = true;
+
 
 	printk("%s, reg-0xb00:0x%x\n",__func__,readl(priv->ioaddr + 0xb00));
 	printk("%s, reg-0xb04:0x%x\n",__func__,readl(priv->ioaddr + 0xb04));
@@ -1259,7 +1268,7 @@ static void x2_tsn_fp_configure(struct x2_priv *priv)
 
 	printk("%s\n",__func__);
 
-	//writel(0x10001000, priv->ioaddr + MTL_FPE_Advance);
+	writel(0x10001000, priv->ioaddr + MTL_FPE_Advance);
 	
 	value = readl(priv->ioaddr + GMAC_INT_EN);
 	value |= (1 << GMAC_INT_FPEIE_EN);	
@@ -1282,7 +1291,7 @@ static void x2_tsn_fp_configure(struct x2_priv *priv)
 
 	control = readl(priv->ioaddr + GMAC_FPE_CTRL_STS);
 	control |= GMAC_FPE_EFPE;
-	control |= 0xffffffff;
+//	control |= 0xffffffff;
 	writel(control, priv->ioaddr + GMAC_FPE_CTRL_STS);
 	printk("%s, and FPE CTRL STS:0x%x\n", __func__, readl(priv->ioaddr + GMAC_FPE_CTRL_STS));
 
@@ -3754,7 +3763,8 @@ static int x2_get_est(struct x2_priv *priv, void __user *data)
 		ret = -EFAULT;
 		goto out_free;
 	}
-
+	printk("%s, reg-0x8ac:%d\n\n",__func__,readl(priv->ioaddr + 0x8ac));
+	printk("%s, reg-0x8d0:%d\n",__func__,readl(priv->ioaddr + 0x8d0));
 out_free:
 	kfree(est);
 	return ret;
@@ -4361,10 +4371,11 @@ static netdev_tx_t x2_xmit(struct sk_buff *skb, struct net_device *ndev)
 	tx_q = &priv->tx_queue[queue];
 
 
-	printk("%s, reg-0x718:%d\n",__func__,readl(priv->ioaddr + 0x718));
-	printk("%s, reg-0x71c:%d\n",__func__,readl(priv->ioaddr + 0x71c));
-	printk("%s, reg-0x8ac:%d\n",__func__,readl(priv->ioaddr + 0x8ac));
-	printk("%s, reg-0x8a8:%d\n",__func__,readl(priv->ioaddr + 0x8a8));
+//	printk("%s, reg-0x718:%d\n",__func__,readl(priv->ioaddr + 0x718));
+//	printk("%s, reg-0x71c:%d\n",__func__,readl(priv->ioaddr + 0x71c));
+	printk("%s, reg-0x8ac:%d\n\n",__func__,readl(priv->ioaddr + 0x8ac));
+	printk("%s, reg-0x8d0:%d\n",__func__,readl(priv->ioaddr + 0x8d0));
+//	printk("%s, reg-0x8a8:%d\n",__func__,readl(priv->ioaddr + 0x8a8));
 
 #if 0	
 	x2_est_read(priv, MTL_EST_BTR_LOW, false);
