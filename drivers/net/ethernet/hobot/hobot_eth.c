@@ -1183,7 +1183,7 @@ static int x2_est_configuration(struct x2_priv *priv)
 	 } else
 		 priv->est_enabled = true;
 
-
+#if 1
 	printk("%s, reg-0xb00:0x%x\n",__func__,readl(priv->ioaddr + 0xb00));
 	printk("%s, reg-0xb04:0x%x\n",__func__,readl(priv->ioaddr + 0xb04));
 	printk("%s, reg-0xb08:%d\n",__func__,readl(priv->ioaddr + 0xb08));
@@ -1197,7 +1197,7 @@ static int x2_est_configuration(struct x2_priv *priv)
 	printk("%s, reg-0xb34:0x%x\n",__func__,readl(priv->ioaddr + 0xb34));
 
 
-
+#endif
 	return ret;
 
 }
