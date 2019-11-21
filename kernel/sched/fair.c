@@ -5131,7 +5131,7 @@ static void cpu_load_update(struct rq *this_rq, unsigned long this_load,
 		 */
 		if (new_load > old_load)
 			new_load += scale - 1;
-
+/*Maybe total_load = ((previous_load * (delta-1) + nowa_load) / delta)*/
 		this_rq->cpu_load[i] = (old_load * (scale - 1) + new_load) >> i;
 	}
 
@@ -8352,7 +8352,7 @@ get_sd_balance_interval(struct sched_domain *sd, int cpu_busy)
 	unsigned long interval = sd->balance_interval;
 
 	if (cpu_busy)
-		interval *= sd->busy_factor;
+		interval *= sd->busy_factor;//这个是周期性忙负载均衡和周期性空闲负载均衡的周期之差.
 
 	/* scale ms to jiffies */
 	interval = msecs_to_jiffies(interval);

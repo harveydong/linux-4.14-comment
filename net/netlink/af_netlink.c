@@ -21,7 +21,7 @@
  * 				 - remove all module support, since netlink is
  * 				   mandatory if CONFIG_NET=y these days
  */
-
+//提供了套接字API
 #include <linux/module.h>
 
 #include <linux/capability.h>
@@ -2732,7 +2732,7 @@ static const struct rhashtable_params netlink_rhashtable_params = {
 	.obj_cmpfn = netlink_compare,
 	.automatic_shrinking = true,
 };
-
+//netlink 子系统初始化
 static int __init netlink_proto_init(void)
 {
 	int i;

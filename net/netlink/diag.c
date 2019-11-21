@@ -5,7 +5,7 @@
 #include <linux/sock_diag.h>
 #include <linux/netlink_diag.h>
 #include <linux/rhashtable.h>
-
+//监视接口，提供用于读写有关netlink套接字的信息
 #include "af_netlink.h"
 
 static int sk_diag_dump_groups(struct sock *sk, struct sk_buff *nlskb)

@@ -6,7 +6,7 @@
  * 				Thomas Graf <tgraf@suug.ch>
  *				Johannes Berg <johannes@sipsolutions.net>
  */
-
+//提供通用的netlink api
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
