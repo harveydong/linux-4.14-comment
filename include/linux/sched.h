@@ -661,7 +661,8 @@ struct task_struct {
 	unsigned long			jobctl;
 
 	/* Used for emulating ABI behavior of previous Linux versions: */
-	unsigned int			personality;
+//为了使缓冲区溢出攻击更加困难，内核支持为内存映射区、栈和堆选择随机的起始地址。
+	unsigned int			personality; //是否设置ADDR_NO_RANDOMIZE.
 
 	/* Scheduler bits, serialized by scheduler locks: */
 	unsigned			sched_reset_on_fork:1;

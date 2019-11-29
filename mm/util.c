@@ -556,6 +556,7 @@ unsigned long vm_commit_limit(void)
 	else
 		allowed = ((totalram_pages - hugetlb_total_pages())
 			   * sysctl_overcommit_ratio / 100);
+//total_swap_pages是交换区的空闲页数
 	allowed += total_swap_pages;
 
 	return allowed;
@@ -623,8 +624,10 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		 * that won't affect the overall amount of available
 		 * memory in the system.
 		 */
+//共享内存页，不能算作空闲页，因为他们不能被释放，只能换出到交换区.
 		free -= global_node_page_state(NR_SHMEM);
 
+//加上交换区的空闲页
 		free += get_nr_swap_pages();
 
 		/*
@@ -633,6 +636,7 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		 * which are reclaimable, under pressure.  The dentry
 		 * cache and most inode caches should fall into this
 		 */
+//加上可回收的内存缓存页
 		free += global_node_page_state(NR_SLAB_RECLAIMABLE);
 
 		/*
@@ -646,15 +650,19 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 		/*
 		 * Reserve some for root
 		 */
+//如果进程没有系统管理权限，那么减去为根用户保留的页数.
 		if (!cap_sys_admin)
 			free -= sysctl_admin_reserve_kbytes >> (PAGE_SHIFT - 10);
-
+//如果可用的页> 申请的页，那么允许创建内存映射
 		if (free > pages)
 			return 0;
 
 		goto error;
 	}
 
+//如果使用不允许过量提交的策略
+
+//首先计算提交内存的上限
 	allowed = vm_commit_limit();
 	/*
 	 * Reserve some for root
@@ -665,11 +673,12 @@ int __vm_enough_memory(struct mm_struct *mm, long pages, int cap_sys_admin)
 	/*
 	 * Don't let a single process grow so big a user can't recover
 	 */
+//为了防止一个用户启动一个消耗内存大的进程，保留一部分内存: 取“进程虚拟内存长度的1/32"和"用户保留的页数"的较小值.
 	if (mm) {
 		reserve = sysctl_user_reserve_kbytes >> (PAGE_SHIFT - 10);
 		allowed -= min_t(long, mm->total_vm / 32, reserve);
 	}
-
+//vm_committed_as是所有进程提交虚拟内存的总和，如果它小于allowed，那么允许创建内存映射
 	if (percpu_counter_read_positive(&vm_committed_as) < allowed)
 		return 0;
 error:

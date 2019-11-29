@@ -1667,6 +1667,12 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 	/*
 	 * Private writable mapping: check memory availability
 	 */
+//如果是需要记账的映射，那么检查所有进程申请的虚拟内存的总和是否超过物理内存的容量
+//需要记账的映射具备以下三个条件
+//1.私有的可写映射
+//2. 不是标准巨型页(因为标准的巨型页单独记账)
+//3. 需要预留物理内存(即未设置VM_NORESERVE).
+
 	if (accountable_mapping(file, vm_flags)) {
 		charged = len >> PAGE_SHIFT;
 		if (security_vm_enough_memory_mm(mm, charged))
@@ -1719,6 +1725,9 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 		 * new file must not have been exposed to user-space, yet.
 		 */
 		vma->vm_file = get_file(file);
+//调用文件的文件操作集合中的mmap方法,即file->f_op->mmap，该方法的主要功能是设置虚拟内存区域的虚拟内存操作集合，其中的fault方法很重要.
+//很多文件系统把文件操作集合中的mmap方法设置为公共函数: generic_file_mmap，该函数的主要功能是把虚拟内存区域的虚拟内存操作集合设置为generic_file_vm_ops.
+//ext4文件系统中的是ext4_file_mmap,其设置虚拟内存区域的操作集合是ext4_file_vm_ops.
 		error = call_mmap(file, vma);
 		if (error)
 			goto unmap_and_free_vma;
@@ -1734,7 +1743,7 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
 
 		addr = vma->vm_start;
 		vm_flags = vma->vm_flags;
-	} else if (vm_flags & VM_SHARED) {
+	} else if (vm_flags & VM_SHARED) {//是共享的匿名映射
 		error = shmem_zero_setup(vma);
 		if (error)
 			goto free_vma;

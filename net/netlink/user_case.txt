@@ -1,0 +1,48 @@
+1.创建netlink socket
+socket(AF_NETLINK, int type, int protocol)
+这里的type可以是SOCK_RAW或SOCK_DGRAM，protocol指定netlink协议类型。目前支持32种.比如NETLINK_ROUTE, NETLINK_FIREWALL, NETLINK_GENERIC.
+
+2. 将netlink socket与进程进行绑定
+函数bind把一个打开的netlink socket与进程进行绑定.
+bind(sock_fd, struct sockaddr_nl*)&nl_addr, sizeof(&nl_addr));
+
+这里netlink socket的地址结构是struct sockaddr_nl:
+----nl_family: 固定为AF_NETLINK,
+----nl_pid设置为当前进程的pid.
+---nl_groups用于指定多播组, 每一个bit对应一个多播组。如果设置为0，表示不加入任何多播组
+
+3. 发送netlink 消息
+为了能把netlink消息发送给内核或者别的进程，需要使用另外一个结构体struct sockaddr_nl作为目的地址。如果消息是发往内核的话，nl_pid和nl_groups都应该设置为0； 如果消息是发往另一进程，nl_pid应该设置为接受者进程的PID,nl_groups用于设置需要发往的多播组.
+
+完成了后，就把netlink地址应用到struct msghdr中，使用sendmsg来发送:
+struct msghdr msg;
+msg.msg_name = (void *)&nladdr;
+msg.msg_namelen = sizeof(nladdr);
+
+在每个应用程序在发送netlink消息之前需要提供netlink消息头:
+struct nlmsghdr{}
+在消息头后面就可以填充消息体的内容了，填充完消息体，使用struct iovec结构体，使iov_base指向包好netlink消息的缓冲区，
+
+struct iovec iov;
+iov.iov_base = (void*)msg_buffer;
+iov.iov_len = nlh->mlmsg_len;
+msg.msg_iov = &iov;
+msg.msg_iovlen = 1;
+sendmsg(sock_fd, &msg, 0);
+
+
+4.接受netlink消息
+
+struct sockaddr_nl nladdr;
+struc msghdr msg;
+struct iovec iov;
+char buff[100];
+
+iov.iov_base = (void*)buff;
+iov.iov_len = 100;
+
+msg.msg_name = (void*)&nladdr;
+msg.msg_namelen =  sizeof(nladdr);
+msg.msg_iov=&iov;
+msg.msg_iovlen=1;
+recvmsg(sock_fd, &msg,0);

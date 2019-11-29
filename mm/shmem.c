@@ -4292,6 +4292,7 @@ int shmem_zero_setup(struct vm_area_struct *vma)
 	 * accessible to the user through its mapping, use S_PRIVATE flag to
 	 * bypass file security, in the same way as shmem_kernel_file_setup().
 	 */
+//在内存文件系统tmpfs中，创建一个dev/zero的文件。
 	file = __shmem_file_setup("dev/zero", size, vma->vm_flags, S_PRIVATE);
 	if (IS_ERR(file))
 		return PTR_ERR(file);

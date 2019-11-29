@@ -305,6 +305,8 @@ struct vm_area_struct {
 	 * For areas with an address space and backing store,
 	 * linkage into the address_space->i_mmap interval tree.
 	 */
+//为了支持查询一个文件区间被映射到哪些虚拟内存区域，把一个文件映射到的所有虚拟内存区域加入该文件的地址空间结构体address_space的成员
+//i_mmap指向的区间树.
 	struct {
 		struct rb_node rb;
 		unsigned long rb_subtree_last;
@@ -316,11 +318,14 @@ struct vm_area_struct {
 	 * can only be in the i_mmap tree.  An anonymous MAP_PRIVATE, stack
 	 * or brk vma (with NULL file) can only be in an anon_vma list.
 	 */
+//把虚拟内存区域所关联的所有anon_vma实例串联起来，一个虚拟内存区域会关联到父进程的anon_vma实例和自己的anon_vma实例
 	struct list_head anon_vma_chain; /* Serialized by mmap_sem &
 					  * page_table_lock */
+	//指向anon_vma实例，结构体anon_vma用来组织匿名页被映射到的所有虚拟内存空间.
 	struct anon_vma *anon_vma;	/* Serialized by page_table_lock */
 
 	/* Function pointers to deal with this struct. */
+	//虚拟内存操作集合
 	const struct vm_operations_struct *vm_ops;
 
 	/* Information about our backing store: */
@@ -356,10 +361,12 @@ struct mm_struct {
 	struct rb_root mm_rb;
 	u64 vmacache_seqnum;                   /* per-thread vmacache */
 #ifdef CONFIG_MMU
+//在内存映射区域找到一个没有映射的区域
 	unsigned long (*get_unmapped_area) (struct file *filp,
 				unsigned long addr, unsigned long len,
 				unsigned long pgoff, unsigned long flags);
 #endif
+	//内存映射区域的起始地址
 	unsigned long mmap_base;		/* base of mmap area */
 	unsigned long mmap_legacy_base;         /* base of mmap area in bottom-up allocations */
 #ifdef CONFIG_HAVE_ARCH_COMPAT_MMAP_BASES
@@ -367,6 +374,7 @@ struct mm_struct {
 	unsigned long mmap_compat_base;
 	unsigned long mmap_compat_legacy_base;
 #endif
+	//用户虚拟地址空间的长度
 	unsigned long task_size;		/* size of task vm space */
 	unsigned long highest_vm_end;		/* highest vma end address */
 	pgd_t * pgd;

@@ -57,6 +57,8 @@ struct netlink_kernel_cfg {
 extern struct sock *__netlink_kernel_create(struct net *net, int unit,
 					    struct module *module,
 					    struct netlink_kernel_cfg *cfg);
+
+//内核空间的程序，调用该接口来 创建netlink套接字,而用户空间，仍然使用socket函数.
 static inline struct sock *
 netlink_kernel_create(struct net *net, int unit, struct netlink_kernel_cfg *cfg)
 {

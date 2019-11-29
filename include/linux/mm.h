@@ -2475,6 +2475,8 @@ void drop_slab_node(int nid);
 #ifndef CONFIG_MMU
 #define randomize_va_space 0
 #else
+//这个是全局变量,0表示关闭虚拟地址空间随机化, 1表示使内存映射区域和栈的起始地址随机化,2表示使内存映射区域、栈和堆的起始地址随机化.
+//可以通过/proc/sys/kernel/randomize_va_space来修改
 extern int randomize_va_space;
 #endif
 

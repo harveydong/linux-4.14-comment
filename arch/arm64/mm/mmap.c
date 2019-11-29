@@ -40,12 +40,13 @@
 
 static int mmap_is_legacy(void)
 {
+//如果进程描述符的成员personaliy设置了ADDR_COMPAT_LAYOUT，表示使用传统的虚拟地址空间布局
 	if (current->personality & ADDR_COMPAT_LAYOUT)
 		return 1;
-
+//或者用户栈可以无限增长。
 	if (rlimit(RLIMIT_STACK) == RLIM_INFINITY)
 		return 1;
-
+//或者可以通过文件/proc/sys/vm/legacy_va_layout指定，那么使用传统的自底向上增长的布局
 	return sysctl_legacy_va_layout;
 }
 
@@ -70,12 +71,14 @@ static unsigned long mmap_base(unsigned long rnd)
 	/* Values close to RLIM_INFINITY can overflow. */
 	if (gap + pad > gap)
 		gap += pad;
-
+//限定不能小于128MB + 栈的最大随机偏移值 + 1；
 	if (gap < MIN_GAP)
 		gap = MIN_GAP;
+//最大不能超过STACK_TOP的5/6
+
 	else if (gap > MAX_GAP)
 		gap = MAX_GAP;
-
+//把内存映射区域设置为: STACK_TOP - 间隙-随机值
 	return PAGE_ALIGN(STACK_TOP - gap - rnd);
 }
 
@@ -83,6 +86,7 @@ static unsigned long mmap_base(unsigned long rnd)
  * This function, called very early during the creation of a new process VM
  * image, sets up which VM layout function to use:
  */
+//该函数负责选择内存映射区域的布局
 void arch_pick_mmap_layout(struct mm_struct *mm)
 {
 	unsigned long random_factor = 0UL;

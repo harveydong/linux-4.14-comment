@@ -1,0 +1,28 @@
+内核空间的其他模块也可以使用netlink socket. 内核模块通过这些API访问netlink socket，并与用户空间的程序进行通信
+1. 在内核创建netlink socket
+netlink_kernel_create();
+第一个参数一般为&init_net即可。
+第二个参数，是代表netlink 协议类型，可以传入自定义的类型。
+第三个参数，cfg存放的是netlink内核配置参数。配置参数中的input成员用于处理接收到的信息。
+
+struct netlink_kernel_cfg{
+-----groups: netlink组，应该是多播使用，单播的情况就是0了.
+
+}
+
+在内核创建一个netlink socket后，当用户程序发送一个netlink消息到内核时，函数input都会被调用.
+在用户空间调动sendmsg时，会调用.
+
+2. 在内核中发送netlink消息
+在内核空间发送netlink消息时有两个接口可以使用, netlink_unicast()
+这里面skb中的data指向需要发送netlink消息体,pid 为要发往的用户进程的pid。
+netlink消息的源地址和目的地址可以通过下面的代码来设置:
+
+NETLINK_CB(skb).groups = local_groups;
+NETLINK_CB(skb).pid = 0; //from kernel
+NETLINK_CB(skb).dst_groups = dst_groups;
+NETLINK_CB(skb).dst_pid = dst_pid;
+
+
+可以发送多播消息: netlink_broadcast();
+其中的group是接收消息的各个组的比特位进行与运算的结果.

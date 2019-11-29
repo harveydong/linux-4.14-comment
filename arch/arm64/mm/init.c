@@ -362,11 +362,12 @@ static void __init fdt_enforce_memory_region(void)
 	if (reg.size)
 		memblock_cap_memory_range(reg.base, reg.size);
 }
-
+//初始化
 void __init arm64_memblock_init(void)
 {
 	const s64 linear_region_size = -(s64)PAGE_OFFSET;
 
+//解析"/chosen"的属性“Linux，usable-memory-range"，得到可用内存的范围,把超出这个范围的物理内存范围从memoblock.memory中删除
 	/* Handle linux,usable-memory-range property */
 	fdt_enforce_memory_region();
 
@@ -380,6 +381,8 @@ void __init arm64_memblock_init(void)
 	/*
 	 * Select a suitable value for the base of physical memory.
 	 */
+
+//全局变量memstart_addr记录内存的起始物理地址.
 	memstart_addr = round_down(memblock_start_of_DRAM(),
 				   ARM64_MEMSTART_ALIGN);
 
@@ -388,6 +391,7 @@ void __init arm64_memblock_init(void)
 	 * linear mapping. Take care not to clip the kernel which may be
 	 * high in memory.
 	 */
+//把线性映射区不能覆盖的物理内存范围从memblock.memory中删除.
 	memblock_remove(max_t(u64, memstart_addr + linear_region_size,
 			__pa_symbol(_end)), ULLONG_MAX);
 	if (memstart_addr + linear_region_size < memblock_end_of_DRAM()) {
@@ -402,6 +406,10 @@ void __init arm64_memblock_init(void)
 	 * high up in memory, add back the kernel region that must be accessible
 	 * via the linear mapping.
 	 */
+
+//在设备树节点中/chosen"的属性"bootargs"中，可以使用参数"mem="指定可用内存大小.如果指定了可用内存的大小,那么把超过可用长度的物理内存范围从memblock.memory中删除.
+
+//因为内核镜像可以被加载到内存的高地址部分,并且内核镜像必须是可以通过线性映射区域访问的，所以需要把内核镜像占用的物理内存重新添加到memblock.memory中.
 	if (memory_limit != (phys_addr_t)ULLONG_MAX) {
 		memblock_mem_limit_remove_map(memory_limit);
 		memblock_add(__pa_symbol(_text), (u64)(_end - _text));
@@ -457,6 +465,8 @@ void __init arm64_memblock_init(void)
 	 * Register the kernel text, kernel data, initrd, and initial
 	 * pagetables with memblock.
 	 */
+
+//把内核占用的物理内存范围添加到memblock.reserved中.
 	memblock_reserve(__pa_symbol(_text), _end - _text);
 #ifdef CONFIG_BLK_DEV_INITRD
 	if (initrd_start) {
@@ -468,6 +478,7 @@ void __init arm64_memblock_init(void)
 	}
 #endif
 
+//从设备树的内存保留区域(memory reserve map,对应设备树字段"/memreserve"和节点"/reserved-memory"读取保留的物理内存范围，添加到memblock.reserved中.
 	early_init_fdt_scan_reserved_mem();
 
 	/* 4GB maximum for 32-bit only capable devices */

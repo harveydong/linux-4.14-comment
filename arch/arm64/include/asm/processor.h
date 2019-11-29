@@ -18,7 +18,6 @@
  */
 #ifndef __ASM_PROCESSOR_H
 #define __ASM_PROCESSOR_H
-
 #define TASK_SIZE_64		(UL(1) << VA_BITS)
 
 #define KERNEL_DS	UL(-1)
@@ -58,10 +57,16 @@
 #define TASK_SIZE		TASK_SIZE_64
 #endif /* CONFIG_COMPAT */
 
+
+//这个是传统布局下的，内存映射区域的起始地址，其内存映射区域是自底向上增长.
+//这个的缺点是堆的最大长度受到限制，对32位系统中影响比较大,但是在64位系统中这不是问题.
 #define TASK_UNMAPPED_BASE	(PAGE_ALIGN(TASK_SIZE / 4))
 
+//CONFIG_COMPAT_BRK，是为了使旧的应用程序(libc5)能正常运行
+
 #define STACK_TOP_MAX		TASK_SIZE_64
-#ifdef CONFIG_COMPAT
+
+#ifdef CONFIG_COMPAT	//支持32位用户空间程序
 #define AARCH32_VECTORS_BASE	0xffff0000
 #define STACK_TOP		(test_thread_flag(TIF_32BIT) ? \
 				AARCH32_VECTORS_BASE : STACK_TOP_MAX)

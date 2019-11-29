@@ -85,6 +85,7 @@ static inline int netlink_is_kernel(struct sock *sk)
 	return nlk_sk(sk)->flags & NETLINK_F_KERNEL_SOCKET;
 }
 
+//这个表是整个netlink实现的关键一步，每种协议类型占数组中的一项。后续内核中创建的不同种协议类型的netlink都将保存在这个表中.
 struct netlink_table *nl_table __read_mostly;
 EXPORT_SYMBOL_GPL(nl_table);
 
@@ -2761,9 +2762,12 @@ static int __init netlink_proto_init(void)
 
 	netlink_add_usersock_entry();
 
+//向内核注册协议处理函数,即将netlink的socket创建处理函数注册到内核中。以后应用层创建netlink类型的socket时，将会调用该协议处理函数.
+
 	sock_register(&netlink_family_ops);
 	register_pernet_subsys(&netlink_net_ops);
 	/* The netlink device handler may be needed early. */
+//创建NETLINK_ROUTE协议类型的netlink，用来传递网络路由子系统、邻居子系统、接口设置、防火墙等消息
 	rtnetlink_init();
 out:
 	return err;

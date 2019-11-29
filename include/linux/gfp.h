@@ -375,6 +375,10 @@ static inline bool gfpflags_allow_blocking(const gfp_t gfp_flags)
 #error GFP_ZONES_SHIFT too large to create GFP_ZONE_TABLE integer
 #endif
 
+//GFP_ZONES_SHIFT是区域类型占用的位数
+
+//内核使用这个宏，定义了标志组合到区域类型的映射表.
+
 #define GFP_ZONE_TABLE ( \
 	(ZONE_NORMAL << 0 * GFP_ZONES_SHIFT)				       \
 	| (OPT_ZONE_DMA << ___GFP_DMA * GFP_ZONES_SHIFT)		       \

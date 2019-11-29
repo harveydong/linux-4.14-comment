@@ -861,7 +861,8 @@ static int load_elf_binary(struct linux_binprm *bprm)
 	SET_PERSONALITY2(loc->elf_ex, &arch_state);
 	if (elf_read_implies_exec(loc->elf_ex, executable_stack))
 		current->personality |= READ_IMPLIES_EXEC;
-
+//如果没有给进程描述符的成员personaliy设置标志位ADDR_NO_RANDOMIZE,并且全局randomize_va_space为是非0值，那么给进程设置标识PF_RANDOMIZE,
+//允许虚拟地址空间随机化
 	if (!(current->personality & ADDR_NO_RANDOMIZE) && randomize_va_space)
 		current->flags |= PF_RANDOMIZE;
 
