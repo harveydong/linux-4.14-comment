@@ -407,11 +407,16 @@ static inline bool gfpflags_allow_blocking(const gfp_t gfp_flags)
 	| 1 << (___GFP_MOVABLE | ___GFP_DMA32 | ___GFP_DMA | ___GFP_HIGHMEM)  \
 )
 
+//这个是内核提供的，从标识位得到区域类型
 static inline enum zone_type gfp_zone(gfp_t flags)
 {
 	enum zone_type z;
+	//首先分离出区域标识位.
 	int bit = (__force int) (flags & GFP_ZONEMASK);
 
+	//然后bit * GFP_ZONES_SHIFT得到在映射表中的偏移.（区域标志位*区域类型位数);
+	//然后把映射表GFP_ZONE_TABLE右移偏移量.
+	//最后取出最低的区域类型位数.
 	z = (GFP_ZONE_TABLE >> (bit * GFP_ZONES_SHIFT)) &
 					 ((1 << GFP_ZONES_SHIFT) - 1);
 	VM_BUG_ON((GFP_ZONE_BAD >> bit) & 1);

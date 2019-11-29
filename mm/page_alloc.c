@@ -6888,6 +6888,21 @@ static void setup_per_zone_lowmem_reserve(void)
 	calculate_totalreserve_pages();
 }
 
+//该函数负责计算每个内存区域的最低水线、低水线和高水线
+//1.计算最低水线的方法是:
+//min_free_pages = min_free_kbytes对应的页数.
+//lowmem_pages = 所有低端内存区域中伙伴分配器管理的页数总和.
+//高端内存区域的最低水线=zone->managed_pages/1024;并且限制在[32,128]范围内. managed_pages是该区域中伙伴分配器管理的页数.
+//低端内存区域的最低水线=min_free_pages * zone->managed_pages /lowmem_pages,即把min_free_pages按比例分配到每个低端内存区域.
+
+//2.计算低水线和高水线的方法:
+//a.增量=(最低水线/4, zone->managed_pages * watermark_scale_factor / 10000)，取最大值.
+//b. 低水线=最低水线+ 增量;
+//c. 高水线=最低水线+ 增量*2;
+
+//3.如果(最低水线/4)比较大，那么计算公式如下:
+//a. 低水线=最低水线*5/4;
+//b. 高水线=最低水线*3/2;
 static void __setup_per_zone_wmarks(void)
 {
 	unsigned long pages_min = min_free_kbytes >> (PAGE_SHIFT - 10);
@@ -6920,14 +6935,14 @@ static void __setup_per_zone_wmarks(void)
 			unsigned long min_pages;
 
 			min_pages = zone->managed_pages / 1024;
-			min_pages = clamp(min_pages, SWAP_CLUSTER_MAX, 128UL);
+			min_pages = clamp(min_pages, SWAP_CLUSTER_MAX, 128UL);//swap_cluster_max=32,把这个高端内存区域的最低水线，限制在[32,128]以内.
 			zone->watermark[WMARK_MIN] = min_pages;
 		} else {
 			/*
 			 * If it's a lowmem zone, reserve a number of pages
 			 * proportionate to the zone's size.
 			 */
-			zone->watermark[WMARK_MIN] = tmp;
+			zone->watermark[WMARK_MIN] = tmp; //低端内存区域的最低水线=
 		}
 
 		/*
@@ -6935,9 +6950,9 @@ static void __setup_per_zone_wmarks(void)
 		 * scale factor in proportion to available memory, but
 		 * ensure a minimum size on small systems.
 		 */
-		tmp = max_t(u64, tmp >> 2,
+		tmp = max_t(u64, tmp >> 2, //这里tmp是最低水线，右移2，就是除以4，
 			    mult_frac(zone->managed_pages,
-				      watermark_scale_factor, 10000));
+				      watermark_scale_factor, 10000)); //tmp就是增量
 
 		zone->watermark[WMARK_LOW]  = min_wmark_pages(zone) + tmp;
 		zone->watermark[WMARK_HIGH] = min_wmark_pages(zone) + tmp * 2;
