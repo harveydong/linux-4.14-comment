@@ -483,6 +483,7 @@ __alloc_pages(gfp_t gfp_mask, unsigned int order, int preferred_nid)
 static inline struct page *
 __alloc_pages_node(int nid, gfp_t gfp_mask, unsigned int order)
 {
+//内核假定传递给aloc_pages_node函数的节点nid是被激活的，但是为了安全它还是检查并警告内存节点不存在的情况
 	VM_BUG_ON(nid < 0 || nid >= MAX_NUMNODES);
 	VM_WARN_ON(!node_online(nid));
 

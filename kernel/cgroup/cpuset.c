@@ -2551,7 +2551,7 @@ static struct cpuset *nearest_hardwall_ancestor(struct cpuset *cs)
  *	in_interrupt - any node ok (current task context irrelevant)
  *	GFP_ATOMIC   - any node ok
  *	tsk_is_oom_victim   - any node ok
- *	GFP_KERNEL   - any node in enclosing hardwalled cpuset ok
+ *	GFP_KERNEL   - any node in enclosing hardwalled cpuset ok; ----enclosing,包围
  *	GFP_USER     - only nodes in current tasks mems allowed ok.
  */
 bool __cpuset_node_allowed(int node, gfp_t gfp_mask)
@@ -2560,7 +2560,7 @@ bool __cpuset_node_allowed(int node, gfp_t gfp_mask)
 	int allowed;			/* is allocation in zone z allowed? */
 	unsigned long flags;
 
-	if (in_interrupt())
+	if (in_interrupt())//在中断环境下，说明该分配并非来自某个进程,所以无论如何都应该被允许.
 		return true;
 	if (node_isset(node, current->mems_allowed))
 		return true;

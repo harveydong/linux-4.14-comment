@@ -259,16 +259,24 @@ struct lruvec {
 /* LRU Isolation modes. */
 typedef unsigned __bitwise isolate_mode_t;
 
+
+//内存区域水线
+//在使用zone page frame allocator分配页面时，会将可用的free pages与zone的watermark进行比较.
+//以便确定是否可以分配内存.
+//同时watermark也用来决定kswapd内核线程的睡眠与唤醒,以便对内存进行检索和压缩处理.
+//每个zone都有一个kswapd内核线程.
 enum zone_watermarks {
-	WMARK_MIN,
-	WMARK_LOW,
-	WMARK_HIGH,
+	WMARK_MIN,//内存不足的最低点,如果计算出来的可用页低于该值,则无法进行页面计数.这个一下的内存是系统的自留内存
+	WMARK_LOW,//默认情况下,该值为WMARK_MIN的125%,此时kswapd将被唤醒,可以通过修改watermark_scale_factor来改变比例值.
+	WMARK_HIGH,//默认情况下,该值为WMARK_MIN的150%,此时kswapd将睡眠.也可以修改比例值.
 	NR_WMARK
 };
 
 #define min_wmark_pages(z) (z->watermark[WMARK_MIN])
 #define low_wmark_pages(z) (z->watermark[WMARK_LOW])
 #define high_wmark_pages(z) (z->watermark[WMARK_HIGH])
+
+
 
 struct per_cpu_pages {
 	int count;		/* number of pages in the list */

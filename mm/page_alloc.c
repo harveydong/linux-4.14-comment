@@ -294,6 +294,19 @@ compound_page_dtor * const compound_page_dtors[] = {
 #endif
 };
 
+//min_free_kbytes的官方解释.
+//使用这个强迫linux VM去保持一个最小数量的内存free. VM 会使用这个值去计算系统中,每个lowmen zone的watermark的MIN值.
+//每个lowmem zone需要根据该zone的大小，成比例的reserved一定数量的free pages.
+
+//为了满足PF_MEMALLOC的分配，需要一些最小的内存量.如果把这个值设置的小于1024KB，那么系统很可能会在high loads下，遭遇deadlock问题.
+
+//在系统初始化时，会根据内存大小计算一个默认值,计算规则是:
+//min_free_kbytes=sqrt(lowmem_kbytes*16) = 4 * sqrt(lowmem_kbytes),这里lowmem_kbytes即可以认为是系统内存大小.
+//计算出来的值也有最大最小限制, 最小为128KB，最大为64M.
+
+//这个值也不是随着内存的增大而线性增长. 因为网络带宽不会随着machine size的增长而线性的增长.
+//所以随着内存的增大,没有必要也线性的预留出过多的内存,能保证紧急时刻的使用量就足矣.
+
 int min_free_kbytes = 1024;
 int user_min_free_kbytes = -1;
 int watermark_scale_factor = 10;
@@ -2984,6 +2997,8 @@ bool __zone_watermark_ok(struct zone *z, unsigned int order, unsigned long mark,
 	const bool alloc_harder = (alloc_flags & (ALLOC_HARDER|ALLOC_OOM));
 
 	/* free_pages may go negative - that's OK */
+
+//这里free_pages是当前内存域空闲页的数目.
 	free_pages -= (1 << order) - 1;
 
 	if (alloc_flags & ALLOC_HIGH)
@@ -3054,6 +3069,9 @@ bool __zone_watermark_ok(struct zone *z, unsigned int order, unsigned long mark,
 	return false;
 }
 
+//内核需要定义一些函数使用的标志,用于控制达到各个水线指定的临界状态时的行为.
+
+//该函数检查标志,该函数根据设置的标志判断是否能从给定的内存区域分配内存
 bool zone_watermark_ok(struct zone *z, unsigned int order, unsigned long mark,
 		      int classzone_idx, unsigned int alloc_flags)
 {
@@ -3128,14 +3146,15 @@ get_page_from_freelist(gfp_t gfp_mask, unsigned int order, int alloc_flags,
 	 * Scan zonelist, looking for a zone with enough free.
 	 * See also __cpuset_node_allowed() comment in kernel/cpuset.c.
 	 */
-//遍历zonelist上的zone.
+//遍历zonelist上的zone. 该zone中有足够的free的page.
+
 	for_next_zone_zonelist_nodemask(zone, z, ac->zonelist, ac->high_zoneidx,
 								ac->nodemask) {
 		struct page *page;
 		unsigned long mark;
 
 		if (cpusets_enabled() &&
-			(alloc_flags & ALLOC_CPUSET) &&
+			(alloc_flags & ALLOC_CPUSET) && //这里的ALLOC_CPUSET，是检查cpuset是否运行某个进程在某个节点上分配页.
 			!__cpuset_zone_allowed(zone, gfp_mask))
 				continue;
 		/*
@@ -4208,6 +4227,10 @@ static inline void finalise_ac(gfp_t gfp_mask,
  * This is the 'heart' of the zoned buddy allocator.
  */
 
+//伙伴系统的心脏
+
+
+//内存水线标志
 
 //算法如下:
 //1.根据分配标志位得到首选区域类型和迁移类型.
@@ -4281,7 +4304,7 @@ unsigned long __get_free_pages(gfp_t gfp_mask, unsigned int order)
 	page = alloc_pages(gfp_mask, order);
 	if (!page)
 		return 0;
-	return (unsigned long) page_address(page);
+	return (unsigned long) page_address(page);//根据page实例计算相关页的线性内存地址,但是对高端内存页是有问题的.
 }
 EXPORT_SYMBOL(__get_free_pages);
 
@@ -4513,6 +4536,12 @@ EXPORT_SYMBOL(free_pages_exact);
  *
  *     nr_free_zone_pages = managed_pages - high_pages
  */
+
+//这里减去high_pages的原因是什么呢？
+//high watermark以上时，就不会进行内存回收，即kswapd就停止运行，去睡眠了.
+//调用到这里有很多条路径.
+//所以在第一次系统初始化时,这里的high_watermark是为0的.
+
 static unsigned long nr_free_zone_pages(int offset)
 {
 	struct zoneref *z;
@@ -4521,9 +4550,10 @@ static unsigned long nr_free_zone_pages(int offset)
 	/* Just pick one node, since fallback list is circular */
 	unsigned long sum = 0;
 
+//只计算一个node上的.因为计算min_free_kbytes满足需求就可以了.
 	struct zonelist *zonelist = node_zonelist(numa_node_id(), GFP_KERNEL);
 
-	for_each_zone_zonelist(zone, z, zonelist, offset) {
+	for_each_zone_zonelist(zone, z, zonelist, offset) { //从给定zone以下的zone开始来计算.
 		unsigned long size = zone->managed_pages;
 		unsigned long high = high_wmark_pages(zone);
 		if (size > high)
@@ -4539,6 +4569,8 @@ static unsigned long nr_free_zone_pages(int offset)
  * nr_free_buffer_pages() counts the number of pages which are beyond the high
  * watermark within ZONE_DMA and ZONE_NORMAL.
  */
+
+//计算ZONE和ZONE_NORMAL区域中，高于high_wartermark中的可用页面数量
 unsigned long nr_free_buffer_pages(void)
 {
 	return nr_free_zone_pages(gfp_zone(GFP_USER));
@@ -6864,11 +6896,21 @@ void __init page_alloc_init(void)
  * calculate_totalreserve_pages - called when sysctl_lowmem_reserve_ratio
  *	or min_free_kbytes changes.
  */
+
+//在这里进行保留内存计算，但是在说这个话题之前,还需要来看另外一个东西.lowmem_reserve_ratio
+//也就是说,除了min_free_kbytes会为每个zone上预留一部分内存外,lowmem_reserve_ratio是在各个zone之间进行一定的防卫预留.
+//主要是防止高端zone在没有内存的情况下过度使用低端zone内存资源.
+
+//在进行内存分配时,这些预留页和watermark相加起来一起决定现在是满足分配请求，还是认为空闲内存量过低需要启动回收.
+
+
 static void calculate_totalreserve_pages(void)
 {
 	struct pglist_data *pgdat;
 	unsigned long reserve_pages = 0;
 	enum zone_type i, j;
+
+//对每个online的内存节点nid进行计算.
 
 	for_each_online_pgdat(pgdat) {
 
@@ -6960,6 +7002,7 @@ static void __setup_per_zone_wmarks(void)
 	unsigned long flags;
 
 	/* Calculate total number of !ZONE_HIGHMEM pages */
+//启动内存回收一定是内存不足了.
 	for_each_zone(zone) {
 		if (!is_highmem(zone))
 			lowmem_pages += zone->managed_pages;
@@ -6999,6 +7042,9 @@ static void __setup_per_zone_wmarks(void)
 		 * scale factor in proportion to available memory, but
 		 * ensure a minimum size on small systems.
 		 */
+//mult_frac的计算是:
+//((managed_pages/10000) * watermark_scale_factor) + ((managed_pages%10000) * (watermark_scale_factor))/10000;
+
 		tmp = max_t(u64, tmp >> 2, //这里tmp是最低水线，右移2，就是除以4，
 			    mult_frac(zone->managed_pages,
 				      watermark_scale_factor, 10000)); //tmp就是增量
@@ -7058,8 +7104,12 @@ int __meminit init_per_zone_wmark_min(void)
 	unsigned long lowmem_kbytes;
 	int new_min_free_kbytes;
 
-	lowmem_kbytes = nr_free_buffer_pages() * (PAGE_SIZE >> 10);
-	new_min_free_kbytes = int_sqrt(lowmem_kbytes * 16);
+
+//低端内存区域中, 低于高水线的内存的总数.
+//min_free_kbytes的计算公式在其定义处可以知道.
+
+	lowmem_kbytes = nr_free_buffer_pages() * (PAGE_SIZE >> 10);//可以认为是系统的内存大小.
+	new_min_free_kbytes = int_sqrt(lowmem_kbytes * 16); //=4 * srqt(lowmem_kbytes);
 
 	if (new_min_free_kbytes > user_min_free_kbytes) {
 		min_free_kbytes = new_min_free_kbytes;
