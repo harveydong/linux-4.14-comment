@@ -299,6 +299,8 @@ static inline int gfpflags_to_migratetype(const gfp_t gfp_flags)
 	BUILD_BUG_ON((1UL << GFP_MOVABLE_SHIFT) != ___GFP_MOVABLE);
 	BUILD_BUG_ON((___GFP_MOVABLE >> GFP_MOVABLE_SHIFT) != MIGRATE_MOVABLE);
 
+
+//如果禁用根据迁移分组，那么就从unmovable的迁移类型来分配内存
 	if (unlikely(page_group_by_mobility_disabled))
 		return MIGRATE_UNMOVABLE;
 
@@ -448,6 +450,10 @@ static inline int gfp_zonelist(gfp_t flags)
  * For the normal case of non-DISCONTIGMEM systems the NODE_DATA() gets
  * optimized to &contig_page_data at compile-time.
  */
+//每个节点node有两个zonelists，其中的原因是由于NUMA架构的引入.
+//一个zonelist是存放了所有内存的zones。
+//一个zonelist存放的是当前node的zones.
+//所以，如果没有指定THIS_NODE标志位，那么优先使用当前节点的zonelist.
 static inline struct zonelist *node_zonelist(int nid, gfp_t flags)
 {
 	return NODE_DATA(nid)->node_zonelists + gfp_zonelist(flags);

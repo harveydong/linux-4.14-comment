@@ -28,7 +28,11 @@
  */
 
 #define arch_spin_lock_flags(lock, flags) arch_spin_lock(lock)
-
+/********************************************/
+/*spinlock的成员如下:高位是next号,owner是叫号.
+ |next  | owner
+*/
+/********************************************/
 static inline void arch_spin_lock(arch_spinlock_t *lock)
 {
 	unsigned int tmp;
@@ -38,29 +42,29 @@ static inline void arch_spin_lock(arch_spinlock_t *lock)
 	/* Atomically increment the next ticket. */
 	ARM64_LSE_ATOMIC_INSN(
 	/* LL/SC */
-"	prfm	pstl1strm, %3\n"
-"1:	ldaxr	%w0, %3\n"
-"	add	%w1, %w0, %w5\n"
-"	stxr	%w2, %w1, %3\n"
-"	cbnz	%w2, 1b\n",
+"	prfm	pstl1strm, %3\n" //将lock变量读取到cache,增加访问速度.%3=*lock;
+"1:	ldaxr	%w0, %3\n" //,w0=localval,将lock的值赋值给lockval; 取得next当前的值，这个就是local票号.保存到localval
+"	add	%w1, %w0, %w5\n"//把localval中的next加1，w5=1<<16;然后赋值给newval;
+"	stxr	%w2, %w1, %3\n"//把新的newval赋值给lock->lock;同时将是否设置成功结果存放到tmp中
+"	cbnz	%w2, 1b\n",//如果tmp不为0，则跳到标号1执行.
 	/* LSE atomics */
-"	mov	%w2, %w5\n"
-"	ldadda	%w2, %w0, %3\n"
+"	mov	%w2, %w5\n" //w5=1<<16; w2= tmp;
+"	ldadda	%w2, %w0, %3\n" //
 	__nops(3)
 	)
 
 	/* Did we get the lock? */
-"	eor	%w1, %w0, %w0, ror #16\n"
-"	cbz	%w1, 3f\n"
+"	eor	%w1, %w0, %w0, ror #16\n" //判断next是否等于owner
+"	cbz	%w1, 3f\n" //进入临界区
 	/*
 	 * No: spin on the owner. Send a local event to avoid missing an
 	 * unlock before the exclusive load.
 	 */
 "	sevl\n"
-"2:	wfe\n"
-"	ldaxrh	%w2, %4\n"
-"	eor	%w1, %w2, %w0, lsr #16\n"
-"	cbnz	%w1, 2b\n"
+"2:	wfe\n" //自选等待
+"	ldaxrh	%w2, %4\n" //tmp=lock->owner,获取当前owner值，存放在tmp中.
+"	eor	%w1, %w2, %w0, lsr #16\n"//判断next是否等于owner.
+"	cbnz	%w1, 2b\n" //如果不等于，则跳到标号2自选,否者进入临界区
 	/* We got the lock. Critical section starts here. */
 "3:"
 	: "=&r" (lockval), "=&r" (newval), "=&r" (tmp), "+Q" (*lock)

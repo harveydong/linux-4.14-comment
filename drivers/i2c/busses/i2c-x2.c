@@ -449,6 +449,15 @@ static int x2_i2c_probe(struct platform_device *pdev)
 
 	ret = i2c_add_adapter(adap);
 #if 1
+	//config寄存器:
+	//bit[11]--to_en: time out check enable, 1=enable time out check; 0=disable time out check
+	//bit[9]---TRANS_EN: transaction mode enable, 该bit为1，i2c master工作在transaction mode,software 需要根据该模式去配置寄存器，避免频繁的产生中断. 如果该bit=0,i2c master工作在non-transaction mode.
+	//bit[8]--EN: i2c module enable bit.
+	//bit[7:0]: 分频比,默认值是0x1d, 即该值=24M/(8*fscl) - 1=24M/(8*100k or 8*400k) -1,在100kbps下，是29=0x1d.
+	//bit[17]: DIR_RD,就是在有子地址情况下(subaddress)，比如读取eeprom或者sesor，那么读数据时，需要先写subaddress，然后
+	//采取读.那么这个bit就需要设置为0了.
+
+
 	//i2c_dev->i2c_regs->CFG.bit.clkdiv = 0x1d;
 	i2c_dev->i2c_regs->cfg.bit.tran_en = 1;
 	i2c_dev->i2c_regs->cfg.bit.en = 1;
