@@ -88,7 +88,7 @@ enum pageflags {
 	PG_private,		/* If pagecache, has fs-private data */
 	PG_private_2,		/* If pagecache, has fs aux data */
 	PG_writeback,		/* Page is under writeback */
-	PG_head,		/* A head page */
+	PG_head,		/* A head page */用在复合页上，一个由n阶的页块组成的复合页:第一页叫首页,其他页都叫尾页
 	PG_mappedtodisk,	/* Has blocks allocated on-disk */
 	PG_reclaim,		/* To be reclaimed asap */
 	PG_swapbacked,		/* Page is backed by RAM/swap */

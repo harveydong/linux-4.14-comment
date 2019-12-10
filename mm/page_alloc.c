@@ -73,6 +73,42 @@
 #include <asm/div64.h>
 #include "internal.h"
 
+
+//这里来说下，内存分配标志. gfp_flags，这个指导着alloc_pages也分配器的分配行为.该标志分为5个部分
+
+//1. 区域修饰符: 就是从那个区域来分配,比如ZONE_DMA, ZONE_DMA32, ZONE_NORMAL, ZONE_HIGHMEM, ZONE_MOVABLE.
+
+//2. 页移动性和位置提示: 指定页的迁移类型和从哪些内存节点分配页.比如:
+//__GFP_MOVABLE,申请可移动页,也是区域修饰符
+//__GFP_RECLAIMABLE,申请可回收页
+//__GFP_WRITE,指明调用者打算写物理页.只要有可能，把这些页分布到本地节点的所有区域,避免所有脏页在一个内存区域.
+//__GFP_HARDWALL, 实施cpuset内存分配策略
+//__GFP_THISNODE,强制从指定节点分配页
+//__GFP_ACCOUNT,把分配的页记账到内核内存控制组.
+
+//3.水线修饰符.
+//__GFP_HIGH,指明调用者是高优先级的,为了是系统能向前推进,必须准许这个请求。例如,创建一个I/O上下文,把脏页回写到存储设备.
+//__GFP_ATOMIC,指明调用者是高优先级的,不能回收页或睡眠.
+//__GFP_MEMALLOC,允许访问所有内存.只能在调用者承诺“给我少量紧急保留内存,我可以释放更多的内存”的时候使用.
+//__GFP_NOMEMALLOC,禁止访问紧急保留内存.
+
+//4.回收修饰符
+//_GFP_IO,允许读写存储设备
+//__GFP_FS,允许向下调用到底层文件系统.当文件系统申请页的时候，如果内存严重不足，直接回收页,把脏页写会到存储设备,调用文件系统的函数,可能导致死锁。为了避免死锁,文件系统中申请页的时候应该清除这个标志位.
+//__GFP_DIRECT_RECLAIM,调用者可以直接回收页.
+//__GFP_KSWAPD_RECLAIM,当空闲页树达到低水线的时候,调用者想要唤醒页回收线程kswapd，即异步回收页.
+//__GFP_RECLAIM,允许直接回收和异步回收页.
+//__GFP_REPEAT,允许重试,重试多次以后放弃，分配可能失败.
+//__GFP_NOFAIL,必须无限次重试，因为调用者不能处理分配失败
+//__GFP_NORETRY,不要重试，当直接回收页和内存碎片整理不能使分配成功的时候,应该放弃.
+
+//5.行动修饰符
+//__GFP_COLD,调用者不期望分配的页很快被使用,尽可能分配缓存冷页.
+//__GFP_NOWARN,如果分配失败,不要打印警告信息
+//__GFP_COMP,把分配的页块组成复合页(compound page)
+//__GFP_ZERO,把页用零初始化.
+
+
 /* prevent >1 _updater_ of zone percpu pageset ->high and ->batch fields */
 static DEFINE_MUTEX(pcp_batch_high_lock);
 #define MIN_PERCPU_PAGELIST_FRACTION	(8)
@@ -3092,6 +3128,7 @@ get_page_from_freelist(gfp_t gfp_mask, unsigned int order, int alloc_flags,
 	 * Scan zonelist, looking for a zone with enough free.
 	 * See also __cpuset_node_allowed() comment in kernel/cpuset.c.
 	 */
+//遍历zonelist上的zone.
 	for_next_zone_zonelist_nodemask(zone, z, ac->zonelist, ac->high_zoneidx,
 								ac->nodemask) {
 		struct page *page;
@@ -4124,7 +4161,7 @@ static inline bool prepare_alloc_pages(gfp_t gfp_mask, unsigned int order,
 		struct alloc_context *ac, gfp_t *alloc_mask,
 		unsigned int *alloc_flags)
 {
-	ac->high_zoneidx = gfp_zone(gfp_mask);
+	ac->high_zoneidx = gfp_zone(gfp_mask);//找到合适的区域(ZONE_DMA, ZONE_DMA32, ZONE_NORMAL, ZONE_HIGHMEM)，这里是下标.
 	ac->zonelist = node_zonelist(preferred_nid, gfp_mask);
 	ac->nodemask = nodemask;
 	ac->migratetype = gfpflags_to_migratetype(gfp_mask);
@@ -4170,6 +4207,12 @@ static inline void finalise_ac(gfp_t gfp_mask,
 /*
  * This is the 'heart' of the zoned buddy allocator.
  */
+
+
+//算法如下:
+//1.根据分配标志位得到首选区域类型和迁移类型.
+//2.执行快速路径，使用低水线尝试第一次分配.
+//3. 如果快速路径分配失败，那么执行慢速路径
 struct page *
 __alloc_pages_nodemask(gfp_t gfp_mask, unsigned int order, int preferred_nid,
 							nodemask_t *nodemask)
@@ -5244,6 +5287,7 @@ void __ref build_all_zonelists(pg_data_t *pgdat)
 		__build_all_zonelists(pgdat);
 		/* cpuset refresh routine should be here */
 	}
+//所有内存区域里面高水线以上的物理页总数.
 	vm_total_pages = nr_free_pagecache_pages();
 	/*
 	 * Disable grouping by mobility if the number of pages in the
@@ -5252,6 +5296,7 @@ void __ref build_all_zonelists(pg_data_t *pgdat)
 	 * made on memory-hotadd so a system can start with mobility
 	 * disabled and enable it later
 	 */
+//如果所有内存区域里面高水线以上的物理页总数小于(pageblock_nr_pages * 迁移类型数量),那么就禁用根据可移动性分组
 	if (vm_total_pages < (pageblock_nr_pages * MIGRATE_TYPES))
 		page_group_by_mobility_disabled = 1;
 	else
@@ -5343,7 +5388,10 @@ not_early:
 		 * check here not to call set_pageblock_migratetype() against
 		 * pfn out of zone.
 		 */
-		if (!(pfn & (pageblock_nr_pages - 1))) {
+//内核在初始化时，把所有页块初始化为可移动类型，其他迁移类型的页都是通过盗用产生
+//的.
+
+		if (!(pfn & (pageblock_nr_pages - 1))) { //如果是分组页块的第一个页
 			struct page *page = pfn_to_page(pfn);
 
 			__init_single_page(page, pfn, zone, nid);
@@ -5952,6 +6000,7 @@ static inline void setup_usemap(struct pglist_data *pgdat, struct zone *zone,
 
 #ifdef CONFIG_HUGETLB_PAGE_SIZE_VARIABLE
 
+//pageblock_order是按可移动性分组的阶数，简称分组阶数，可以理解为一种迁移类型的一个页块的最下长度。如果内核支持巨型页，那么pageblock_order是巨型页的阶数。
 /* Initialise the number of pages represented by NR_PAGEBLOCK_BITS */
 void __paginginit set_pageblock_order(void)
 {

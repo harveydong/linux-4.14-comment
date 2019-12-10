@@ -52,7 +52,7 @@ struct page {
 						 * see PAGE_MAPPING_ANON below.
 						 */
 		void *s_mem;			/* slab first object */
-		atomic_t compound_mapcount;	/* first tail page */
+		atomic_t compound_mapcount;	/* first tail page */在复合页中，第一个尾页的这个成员表示复合页的映射计数，即多少个虚拟页映射到了这个物理页，初始值是-1.其他的尾页把mapping设置为一个有毒的地址.
 		/* page_deferred_list().next	 -- second tail page */
 	};
 
@@ -140,7 +140,7 @@ struct page {
 						 */
 		/* Tail pages of compound page */
 		struct {
-			unsigned long compound_head; /* If bit zero is set */
+			unsigned long compound_head; /* If bit zero is set */所有尾页的这个成员，存放首页的地址，并且把最低位设置为1.
 
 			/* First tail page only */
 #ifdef CONFIG_64BIT

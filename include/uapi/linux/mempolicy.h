@@ -16,11 +16,12 @@
  */
 
 /* Policies */
+//系统支持的内存策略
 enum {
-	MPOL_DEFAULT,
-	MPOL_PREFERRED,
-	MPOL_BIND,
-	MPOL_INTERLEAVE,
+	MPOL_DEFAULT,//默认策略，也就是应该从当前节点分配内存.如果当前节点没有空闲内存时，那从最近有空闲内存的节点分配.
+	MPOL_PREFERRED, //从指定节点上分配内存。若该节点上没有空闲内存，则其他任何一个节点都可以.
+	MPOL_BIND, //内存分配指定在特定的节点集(即某几个节点)中.这些节点不能提供所需要的内存时，内存分配就会失败.
+	MPOL_INTERLEAVE,//内存分配要覆盖所有节点,该策略通常用于共享内存区域.分配的内存覆盖所有区域来保证不会有节点过载。
 	MPOL_LOCAL,
 	MPOL_MAX,	/* always last member of enum */
 };

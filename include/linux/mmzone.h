@@ -361,6 +361,7 @@ struct zone {
 	/* zone watermarks, access with *_wmark_pages(zone) macros */
 	unsigned long watermark[NR_WMARK];
 
+//高阶原子分配.
 	unsigned long nr_reserved_highatomic;
 
 	/*

@@ -64,6 +64,8 @@
    make bind policy root only? It can trigger oom much faster and the
    kernel is not always grateful with that.
 */
+//内存策略，就是指应用程序控制字节的内存分配。可以通过mbind和set_mempolicyl两个系统调用来设置内存策略.
+//可以通过numactl工具来方便操作NUMA内存.
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 

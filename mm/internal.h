@@ -472,13 +472,15 @@ extern void set_pageblock_order(void);
 unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 					    struct list_head *page_list);
 /* The ALLOC_WMARK bits are used as an index to zone->watermark */
-#define ALLOC_WMARK_MIN		WMARK_MIN
-#define ALLOC_WMARK_LOW		WMARK_LOW
-#define ALLOC_WMARK_HIGH	WMARK_HIGH
+
+//页分配器定义的内部分配标志位
+#define ALLOC_WMARK_MIN		WMARK_MIN //0x0,使用最低水线
+#define ALLOC_WMARK_LOW		WMARK_LOW//0x01, 使用低水线
+#define ALLOC_WMARK_HIGH	WMARK_HIGH //0x2,使用高水线
 #define ALLOC_NO_WATERMARKS	0x04 /* don't check watermarks at all */
 
 /* Mask to get the watermark bits */
-#define ALLOC_WMARK_MASK	(ALLOC_NO_WATERMARKS-1)
+#define ALLOC_WMARK_MASK	(ALLOC_NO_WATERMARKS-1) //得到水线位的掩码
 
 /*
  * Only MMU archs have async oom victim reclaim - aka oom_reaper so we
@@ -491,10 +493,10 @@ unsigned long reclaim_clean_pages_from_list(struct zone *zone,
 #define ALLOC_OOM		ALLOC_NO_WATERMARKS
 #endif
 
-#define ALLOC_HARDER		0x10 /* try to alloc harder */
-#define ALLOC_HIGH		0x20 /* __GFP_HIGH set */
-#define ALLOC_CPUSET		0x40 /* check for correct cpuset */
-#define ALLOC_CMA		0x80 /* allow allocations from CMA areas */
+#define ALLOC_HARDER		0x10 /* try to alloc harder,试图更努力分配 */
+#define ALLOC_HIGH		0x20 /* __GFP_HIGH set ,调用者是高优先级的*/
+#define ALLOC_CPUSET		0x40 /* check for correct cpuset ,检测cpuset是否允许进程从某个内存节点分配页*/
+#define ALLOC_CMA		0x80 /* allow allocations from CMA areas,允许从CMA迁移类型分配 */
 
 enum ttu_flags;
 struct tlbflush_unmap_batch;

@@ -24,6 +24,19 @@
 
 #define TICKET_SHIFT	16
 
+
+//为了解决多个cpu一起去抢spinlock,那么谁先抢到呢?
+//在linux-2.6.24之前的内核中,就是斗狠.比如cpu0已经持有了spin_lock，在其释放之前,cpu1--cpu7都来抢.在cpu0释放spinlock的瞬间,cpu1--cpu7到底谁先
+//抢到,这个就不知道了，那么这就会出现饥饿的现象.
+
+//所以,为了解决这个问题,2.6.25之后,spinlock采用了银行的叫号机制,就是来银行,先取一个号,银行柜台每服务完一个人，就报一个新的号.
+//如果报的号等于自己持有的票,则取得柜台服务.
+
+
+//这里的ownwer类似于柜台语音报的号,next是取票的号.
+//这里的逻辑是: 谁取票先把spinlock的next暂存到本地local_next,然后把spinlock的next+1.
+//所以后来的人取到的票号肯定更大;
+//谁释放锁就把owner加1，如果spinlock释放后,owner正好等于某个cpu本地暂存的local_next，则这个cpu获得spinlock
 typedef struct {
 #ifdef __AARCH64EB__
 	u16 next;
