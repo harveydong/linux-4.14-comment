@@ -1,0 +1,85 @@
+在arm64架构上，汇编代码初始化阶段会创建两次地址映射。第一次是为了打开MMU操作的准备，这段映射在linux中称为identity mapping。第二次是kernel image映射.
+
+在kernel启动开始首先就会打开mmu,但是打开mmu之前，我们需要填充页表。系统启动初期使用section mapping,因此需要3个页面存储页表项.但是我们有identity mapping和kernel image mapping，因此总共需要6个页面.这6个页面内存是在vmlinux.ld.S中静态分配的.
+
+在head.S中，有三个宏定义和创建地址映射有关。分别是: create_table_entry, create_pgd_entry和create_block_map.
+
+1. 
+create_table_entry(tbl, virt, shift, ptrs, tmp1, tmp2)
+{
+	tmp1 = virt >> shift; //a
+	tmp1 &= ptrs - 1; //a
+	tmp2 = tbl + PAGE_SIZE; //b
+	tmp2 |= PMD_TYPE_TABLE //c, PMD_TYPE_TABLE=(3<<0)
+	
+	*((long *)(tbl + (tmp1 << 3))) = tmp2; //d
+	tbl += PAGE_SIZE; //e
+}
+
+解释:
+a. 根据virt和ptrs参数计算该虚拟地址virt的页表项在页表中的index.例如计算virt地址在PGD页表中的index,可以传递shift=PGDIR_SHIFT,ptrs=PTRS_PER_PGD,tbl传递PGD页表基地址。所以，宏定义是一个创建中间level的页表项.
+
+b.既然要填充当前level的页表项，就需要告知下一个level页表的基地址，这里就是计算下一个页表的基地址.idmap_pg_dir和swappig_pg_dir，页表(PGD/PUD/PMD)都是连在一起的，地址相差PAGE_SIZE.
+
+c.告知mmu这是一个中间level页表并且是有效的.
+d. 页表项的真正填充操作, tmp1 << 3是因为ARM64的地址占用8B.
+e. 更新tbl,也就是指向下一个level页表的地址，可以方便再一次调用create_table_entry填充下一个level页表项而不用自己更新tbl.
+
+2.
+create_pgd_entry
+这个宏可以用来填充PGD, PUD, PMD等中间level页表对应的页表项。虽然名字是创建PGD的描述符，但是实际上是一级一级的创建页表项，最终只留下最后一级页表没有填充页表项。
+
+create_pgd_entry(tbl, virt, tmp1, tmp2)
+{
+	create_table_entry(tbl, virt, PGDIR_SHIFT, PTER_PER_PGD, tmp1, tmp2);//a
+	create_table_entry(tbl, virt, SWAPPER_TABLE_SHIFT, PTRS_PER_PTE, tmp1, tmp2);//b
+}
+
+解释:
+a. 这里的tbl参数相当于PGD页表地址，调用create_table_entry创建PGD页表中virt地址对应的页表项.
+b. 填充下一个level的页表项.这里是PUD页表. 由于arm64初期使用section mapping,因此PUD页表就是最后一个中间level的页表.所以只剩下PMD页表的页表项没有填充,virt地址对应的PMD页表项最终会会填充block descriptor。假设这里使用4级页表，那么下面还会创建PMD页表的页表项，也就是只留下PTE页表.
+所以宏定义是创建所有中间level的页表项，只留下最后一级页表.
+
+所以在经过create_pgd_entry宏的调用后，就填充好了从PGD开始的所有中间level的页表的页表项，现在只剩下PTE页表的页表项没有填充.所以下面就来介绍create_block_map。
+
+3. 
+create_block_map:该宏的作用是创建虚拟地址(从start到end)区域映射到Phys物理地址.
+
+
+SWAPPER_BLOCK_SHIFT PMD_SHIFT
+SWPPER_BLOCK_SIZE (1 << PMD_SHIFT)
+
+create_block_map(tbl, flags, phys, start, end)
+{
+	phys >>= SWAPPER_BLOCK_SHIFT; //a
+	start >> = SWAPPER_BLOCK_SHIFT; //b.
+	start &= PTRS_PER_PTE -1 //b.
+	
+	phys = flags | (phys << SWAPPER_BLOCK_SHIFT); //c
+	end >> = SWAPPER_BLOCK_SHIFT; //d
+	end &= PTRS_PER_PTE - 1; //d
+
+	while(start != end) { //e
+		*((long *)(tbl + (start << 3))) = phys;//f
+		start ++;//g
+		phys += SWAPPER_BLOCK_SIZE;//h
+	}
+}
+
+解释:
+a. 针对phys的低SWAPPER_BLOCK_SHIFT位进行清零，和c中的phys << SWAPPER_BLOCK_SHIFT收尾呼应，相当于对其（这里的情况是2M对其).
+b. 计算起始地址start的页目录项的index.
+c. 构造描述符.
+d. 计算结束地址end的页目录项的index.
+e. 循环填充start 到end的页目录项.
+f. 根据页表基地址tlb和当前的start变量填充相应的页表项.
+g.更新下一个页表项.
+h. 更新下一个block的物理地址。
+
+
+
+在head.S中，负责创建映射关系的韩式是create_page_tables.该函数负责identity mapping和kernel image mapping.
+由于identity mapping主要是打开MMU的过度阶段，因此对于identity mapping不需要映射整个kernel，只需要映射操作MMU代码相关的部分.这部分代码是放在名为".idmap.text"中的. 从链接脚本中，有__idmap_text_start和__idmap_text_end来表示.idmap.text段的起始和结束地址.
+还有_text和_end这两个变量,分别是kernel代码链接的开始和结束地址.
+
+

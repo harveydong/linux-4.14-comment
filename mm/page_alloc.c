@@ -6946,6 +6946,9 @@ static void calculate_totalreserve_pages(void)
  *	has a correct pages reserved value, so an adequate number of
  *	pages are left in the zone after a successful __alloc_pages().
  */
+
+//每个zone都需要一些保留内存,主要是为了防止过度借用.
+
 static void setup_per_zone_lowmem_reserve(void)
 {
 	struct pglist_data *pgdat;

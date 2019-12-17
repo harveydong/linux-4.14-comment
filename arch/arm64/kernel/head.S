@@ -220,7 +220,7 @@ __create_page_tables:
 	 * Invalidate the idmap and swapper page tables to avoid potential
 	 * dirty cache lines being evicted.
 	 */
-	adrp	x0, idmap_pg_dir
+	adrp	x0, idmap_pg_dir //__pa(idmap_pg_dir)
 	ldr	x1, =(IDMAP_DIR_SIZE + SWAPPER_DIR_SIZE + RESERVED_TTBR0_SIZE)
 	bl	__inval_dcache_area
 
@@ -241,7 +241,7 @@ __create_page_tables:
 	/*
 	 * Create the identity mapping.
 	 */
-	adrp	x0, idmap_pg_dir
+	adrp	x0, idmap_pg_dir //__pa(idmap_pg_dir)
 	adrp	x3, __idmap_text_start		// __pa(__idmap_text_start)
 
 #ifndef CONFIG_ARM64_VA_BITS_48
@@ -278,27 +278,33 @@ __create_page_tables:
 	str	x5, [x6]
 	dmb	sy
 	dc	ivac, x6		// Invalidate potentially stale cache line
-
 	create_table_entry x0, x3, EXTRA_SHIFT, EXTRA_PTRS, x5, x6
 1:
 #endif
 
+//填充PGD以及中间level页表的页表项. 
 	create_pgd_entry x0, x3, x5, x6
+
+//	由于我们是为了创建虚拟地址和物理地址相等的映射，因此这里x3和x5值相等.
 	mov	x5, x3				// __pa(__idmap_text_start)
 	adr_l	x6, __idmap_text_end		// __pa(__idmap_text_end)
+//调用create_block_map创建identity mapping,这里传递的物理地址(x3)和虚拟地址(x5)相等.
 	create_block_map x0, x7, x3, x5, x6
 
 	/*
 	 * Map the kernel image (starting with PHYS_OFFSET).
 	 */
+//创建kernel image mapping.
 	adrp	x0, swapper_pg_dir
 	mov_q	x5, KIMAGE_VADDR + TEXT_OFFSET	// compile time __va(_text)
 	add	x5, x5, x23			// add KASLR displacement
+//填充PGD以及中间level页表的页表项.
 	create_pgd_entry x0, x5, x3, x6
 	adrp	x6, _end			// runtime __pa(_end)
 	adrp	x3, _text			// runtime __pa(_text)
 	sub	x6, x6, x3			// _end - _text
 	add	x6, x6, x5			// runtime __va(_end)
+//填充PMD页表项。因为采用的是section mapping，所以一个页表项对应2M大小.
 	create_block_map x0, x7, x3, x5, x6
 
 	/*
@@ -335,8 +341,12 @@ __primary_switched:
 
 	str_l	x21, __fdt_pointer, x5		// Save FDT pointer
 
+//x4保存的是kernel image的运行的虚拟地址. 这个函数是映射在kernel image mapping区域的.
+
 	ldr_l	x4, kimage_vaddr		// Save the offset between
+//计算虚拟地址和物理地址的偏移.
 	sub	x4, x4, x0			// the kernel virtual and
+//将偏移写到kimage_offset全局变量.
 	str_l	x4, kimage_voffset, x5		// physical mappings
 
 	// Clear BSS
@@ -724,6 +734,7 @@ __primary_switch:
 	bl	__relocate_kernel
 #ifdef CONFIG_RANDOMIZE_BASE
 	ldr	x8, =__primary_switched
+//x0寄存器通过adrp指令可以获取运行时地址，也就是实际运行的物理地址.这个函数是位于".idmap.text"段的.
 	adrp	x0, __PHYS_OFFSET
 	blr	x8
 

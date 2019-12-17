@@ -1,0 +1,17 @@
+对于dtb的映射，内核使用的是fixed-mapped address。
+fixed-mapping机制:
+1. 在很早起的阶段需要进行地址映射,而此时,由于内存管理模块还没有完成初始化,不能动态分配内存,也就是无法动态分配创建映射需要的页表内存空间.
+2. 物理地址是固定的，或者是在运行时就可以确定的.
+
+对于这类问题，内核定义了一段固定映射的虚拟地址，让使用fix map机制的各个模块可以在系统启动的早期就可以创建地址映射.
+要创建地址映射就要创建各个level中的描述符. PGD当然使用swapper进程的PGD，其他level的translation table则是静态定义的，这个在(arch/arm64/mm/mmu.c中),位于内核bss段,因此所有需要的translation table都在kernel image mapping的范围内.因此内核可以访问. 并创建fixed-mapped address 这段虚拟地址空间对应的PUD、PMD和PTE的entry。所有中间level的translation table都是在early_fixmap_init函数中完成初始化的.最后一个level则是在各个具体的模块进行的.
+
+对于DTB，则发生在fixmap_remap_fdt函数中.
+
+
+3.early ioremap
+除了DTB，在启动阶段，还有其他模块也想要创建地址映射。内核对于这些需求，统一采用了fixmap机制.
+
+对fixed map的使用:
+fixed-mapped虚拟地址分为了两段: 一段是permanent fixmap, 一段是temporary fixmap.这个temporay就是early io remap使用的.
+

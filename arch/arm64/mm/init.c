@@ -365,6 +365,8 @@ static void __init fdt_enforce_memory_region(void)
 //初始化
 void __init arm64_memblock_init(void)
 {
+
+//PAGE_OFFSET是线性区域的开始虚拟地址.线性区域大小是整个kernel虚拟地址空间的一半.
 	const s64 linear_region_size = -(s64)PAGE_OFFSET;
 
 //解析"/chosen"的属性“Linux，usable-memory-range"，得到可用内存的范围,把超出这个范围的物理内存范围从memoblock.memory中删除
@@ -382,7 +384,7 @@ void __init arm64_memblock_init(void)
 	 * Select a suitable value for the base of physical memory.
 	 */
 
-//全局变量memstart_addr记录内存的起始物理地址.
+//选取一个合适的物理基地址,根据RAM的起始地址按照1G对其.
 	memstart_addr = round_down(memblock_start_of_DRAM(),
 				   ARM64_MEMSTART_ALIGN);
 
@@ -391,16 +393,22 @@ void __init arm64_memblock_init(void)
 	 * linear mapping. Take care not to clip the kernel which may be
 	 * high in memory.
 	 */
+//memstart_addr选取的是物理基地址,kernel虚拟地址空间一半大小作为线性映射区域.因此最大支持的内存范围是memstart_addr + linear_region_size。所以
+//告诉memblock，超过这个区域的范围都是非法的.
 //把线性映射区不能覆盖的物理内存范围从memblock.memory中删除.
 	memblock_remove(max_t(u64, memstart_addr + linear_region_size,
 			__pa_symbol(_end)), ULLONG_MAX);
+
+//如果memstart_addr + linear_region_size的值小于RAM的结束地址,说明[memstart_addr, memstart_addr + linear_region_size]地址空间
+//范围无法覆盖整个RAM地址范围.这时候就需要从RAM结束地址减去linear_region_size的值作为memstart_addr.
 	if (memstart_addr + linear_region_size < memblock_end_of_DRAM()) {
 		/* ensure that memstart_addr remains sufficiently aligned */
 		memstart_addr = round_up(memblock_end_of_DRAM() - linear_region_size,
 					 ARM64_MEMSTART_ALIGN);
+//既然if条件满足了,自然这里的[0, memstart_addr]的地址空间需要从memblock中给remove了.
 		memblock_remove(0, memstart_addr);
 	}
-
+//memstart_addr的值确定下来后，虚拟地址和物理地址以memstart_addr为偏差创建线性映射区域了.这个是在map_mem函数中完成.
 	/*
 	 * Apply the memory limit if it was set. Since the kernel may be loaded
 	 * high up in memory, add back the kernel region that must be accessible

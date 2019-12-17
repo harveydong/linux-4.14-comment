@@ -216,8 +216,11 @@ SECTIONS
 	BSS_SECTION(0, 0, 0)
 
 	. = ALIGN(PAGE_SIZE);
+//idmap_pg_dir是identity mapping使用的页表.
 	idmap_pg_dir = .;
 	. += IDMAP_DIR_SIZE;
+
+//swapper_pg_dir是kernel image mapping初始阶段使用的页表.
 	swapper_pg_dir = .;
 	. += SWAPPER_DIR_SIZE;
 

@@ -280,6 +280,7 @@ static void alloc_init_pud(pgd_t *pgd, unsigned long addr, unsigned long end,
 	}
 	BUG_ON(pgd_bad(*pgd));
 
+//对于arm64,linux内核不使用pud,所以pud就是pgd.
 	pud = pud_set_fixmap_offset(pgd, addr);
 	do {
 		pud_t old_pud = *pud;
@@ -416,6 +417,9 @@ void __init mark_linear_text_alias_ro(void)
 			    (unsigned long)__init_begin - (unsigned long)_text,
 			    PAGE_KERNEL_RO);
 }
+
+
+//对所有的内存建立页表，进行映射
 
 static void __init map_mem(pgd_t *pgd)
 {
