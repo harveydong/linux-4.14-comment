@@ -3570,6 +3570,17 @@ static inline void ____napi_schedule(struct softnet_data *sd,
 
 #ifdef CONFIG_RPS
 
+/*
+对于RPS,需要设置sock flow table的大小.这个是在/proc/sys/net/core/rps_sock_flow_entries中设置的,这个是RFS需要的
+而RPS需要设置rps_cpu map.这个是在/sys/class/net/<NIC>/queues/rx-<n>/中的 (rps_cpus  rps_flow_cnt),这两个参数
+其实对于自由RPS而言,只需要一个rps_cpus就可以了, 而如果要用到RFS，那么就需要设置rps_flow_cnt.
+
+rps_flow这个是用来保存packet的hash和处理该packet的cpu的.
+而rps_sock_flow是用来保存处理socket的cpu的,如果 socket中的cpu和rps_flow中的cpu不一样,那么就需要把该packet放到socket所在的cpu中去.
+
+*/
+
+
 /* One global table that all flow-based protocols share. */
 struct rps_sock_flow_table __rcu *rps_sock_flow_table __read_mostly;
 EXPORT_SYMBOL(rps_sock_flow_table);
@@ -3674,16 +3685,19 @@ static int get_rps_cpu(struct net_device *dev, struct sk_buff *skb,
 		u32 ident;
 
 		/* First check into global flow table if there is a match */
+
+//首先检查该packet对应的sock是否已经在sock_flow_table中,这个是32位的,高位是hash,低位是cpu
+
 		ident = sock_flow_table->ents[hash & sock_flow_table->mask];
-		if ((ident ^ hash) & ~rps_cpu_mask)
+		if ((ident ^ hash) & ~rps_cpu_mask) //如果该hash和该sock entry记录的hash是一样的,那么就说明已经有socket在处理该包了.
 			goto try_rps;
 
-		next_cpu = ident & rps_cpu_mask;
+		next_cpu = ident & rps_cpu_mask; //那么既然已经有socket在处理该包,那么就取出该socket所在的cpu作为该包的目的cpu.
 
 		/* OK, now we know there is a match,
 		 * we can look at the local (per receive queue) flow table
 		 */
-		rflow = &flow_table->flows[hash & flow_table->mask];
+		rflow = &flow_table->flows[hash & flow_table->mask];//取出本地，也就是rx queue的flow table. 该table记录该packet的hash值.也就是正在处理该包的cpu和hash值.
 		tcpu = rflow->cpu;
 
 		/*
@@ -3699,8 +3713,8 @@ static int get_rps_cpu(struct net_device *dev, struct sk_buff *skb,
 		 */
 		if (unlikely(tcpu != next_cpu) &&
 		    (tcpu >= nr_cpu_ids || !cpu_online(tcpu) ||
-		     ((int)(per_cpu(softnet_data, tcpu).input_queue_head -
-		      rflow->last_qtail)) >= 0)) {
+		     ((int)(per_cpu(softnet_data, tcpu).input_queue_head - //这里input_queue_head是在process_backlog中,处理一个skb，就对input_queue_head加1.而这里rflow中的last_qtail记录的是上次的.
+		      rflow->last_qtail)) >= 0)) { //而对last_qtail是在这次返回后,在enqueue_to_backlog中,先对input_queue_tail加1,然后赋值给last_qtail.那么在这个函数中, last_qtail就比input_queue_head大.
 			tcpu = next_cpu;
 			rflow = set_rps_cpu(dev, skb, rflow, next_cpu);
 		}
@@ -3716,7 +3730,7 @@ try_rps:
 
 	if (map) {
 		tcpu = map->cpus[reciprocal_scale(hash, map->len)];
-		if (cpu_online(tcpu)) {
+		if (cpu_online(tcpu)) { //如果走到这里了,那么就不考虑sock flow了.
 			cpu = tcpu;
 			goto done;
 		}
